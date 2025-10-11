@@ -1,5 +1,5 @@
 using IdeaGraph.Components;
-using IdeaGraph.Services;
+using IdeaGraph.Client.Services;
 
 namespace IdeaGraph
 {
