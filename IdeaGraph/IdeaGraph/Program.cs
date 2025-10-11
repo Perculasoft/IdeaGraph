@@ -1,5 +1,5 @@
-using IdeaGraph.Client.Pages;
 using IdeaGraph.Components;
+using IdeaGraph.Services;
 
 namespace IdeaGraph
 {
@@ -13,6 +13,13 @@ namespace IdeaGraph
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents()
                 .AddInteractiveWebAssemblyComponents();
+
+            // Configure HttpClient for IdeaService
+            var ideaGraphApiUrl = builder.Configuration["IdeaGraphApi:BaseUrl"] ?? "http://localhost:8000/";
+            builder.Services.AddHttpClient<IdeaService>(client =>
+            {
+                client.BaseAddress = new Uri(ideaGraphApiUrl);
+            });
 
             var app = builder.Build();
 
