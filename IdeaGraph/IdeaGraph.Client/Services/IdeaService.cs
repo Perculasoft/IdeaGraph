@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Json;
 using IdeaGraph.Client.Models;
 
@@ -19,8 +20,9 @@ namespace IdeaGraph.Client.Services
                 var ideas = await _httpClient.GetFromJsonAsync<List<Idea>>("api/ideas");
                 return ideas ?? new List<Idea>();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Debug.WriteLine(ex.ToString());
                 return new List<Idea>();
             }
         }

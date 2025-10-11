@@ -7,6 +7,7 @@ import os, uuid, httpx, math
 import chromadb
 from dotenv import load_dotenv
 import logging
+from fastapi.openapi.utils import get_openapi
 
 # Load environment variables from .env file
 load_dotenv()
@@ -51,6 +52,31 @@ if ALLOW_ORIGINS:
 # --- API Key Authentication ---
 api_key_header = APIKeyHeader(name="X-Api-Key", auto_error=False)
 
+app = FastAPI()
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title="IdeaGraph API",
+        version="1.0.0",
+        description="Die zentrale API für IdeaGraph",
+        routes=app.routes,
+    )
+
+    openapi_schema["servers"] = [
+        {
+            "url": "https://api.angermeier.net",
+            "description": "Produktivserver"
+        }
+    ]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
+
+
 async def verify_api_key(api_key: str = Depends(api_key_header)):
     if not X_API_KEY:
         # If no API key is configured, allow all requests
@@ -69,7 +95,7 @@ logger.info("API key authentication configured" if X_API_KEY else "API key authe
 
 # --- App + CORS ---
 logger.info("Initializing FastAPI application...")
-app = FastAPI(title="IdeaGraph API", version="0.1")
+
 if ALLOW_ORIGINS:
     app.add_middleware(
         CORSMiddleware,
