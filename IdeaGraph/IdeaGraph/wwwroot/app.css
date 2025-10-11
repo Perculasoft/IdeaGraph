@@ -1,23 +1,159 @@
+/* Dark Mode Theme - Modern Color Palette */
+:root {
+    --dark-bg-primary: #0d1117;
+    --dark-bg-secondary: #161b22;
+    --dark-bg-tertiary: #1c2128;
+    --dark-bg-elevated: #21262d;
+    --dark-border: #30363d;
+    --dark-text-primary: #e6edf3;
+    --dark-text-secondary: #8b949e;
+    --dark-text-muted: #6e7681;
+    --dark-accent-primary: #58a6ff;
+    --dark-accent-secondary: #1f6feb;
+    --dark-accent-hover: #388bfd;
+    --dark-success: #3fb950;
+    --dark-warning: #d29922;
+    --dark-danger: #f85149;
+}
+
 html, body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+    background-color: var(--dark-bg-primary);
+    color: var(--dark-text-primary);
 }
 
 a, .btn-link {
-    color: var(--bs-link-color);
+    color: var(--dark-accent-primary);
+    text-decoration: none;
 }
 
 a:hover, .btn-link:hover {
-    color: var(--bs-link-hover-color);
+    color: var(--dark-accent-hover);
+    text-decoration: underline;
 }
 
 .btn-primary {
     color: #fff;
-    background-color: #1b6ec2;
-    border-color: #1861ac;
+    background-color: var(--dark-accent-secondary);
+    border-color: var(--dark-accent-secondary);
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    background-color: var(--dark-accent-hover);
+    border-color: var(--dark-accent-hover);
+}
+
+.btn-secondary {
+    color: var(--dark-text-primary);
+    background-color: var(--dark-bg-elevated);
+    border-color: var(--dark-border);
+}
+
+.btn-secondary:hover {
+    background-color: var(--dark-bg-tertiary);
+    border-color: var(--dark-border);
+}
+
+.btn-outline-primary {
+    color: var(--dark-accent-primary);
+    border-color: var(--dark-accent-primary);
+}
+
+.btn-outline-primary:hover {
+    color: #fff;
+    background-color: var(--dark-accent-primary);
+    border-color: var(--dark-accent-primary);
 }
 
 .btn:focus, .btn:active:focus, .btn-link.nav-link:focus, .form-control:focus, .form-check-input:focus {
-  box-shadow: 0 0 0 0.1rem white, 0 0 0 0.25rem #258cfb;
+    box-shadow: 0 0 0 0.1rem var(--dark-bg-primary), 0 0 0 0.25rem var(--dark-accent-primary);
+}
+
+/* Card Styles */
+.card {
+    background-color: var(--dark-bg-secondary);
+    border: 1px solid var(--dark-border);
+    border-radius: 6px;
+}
+
+.card-header {
+    background-color: var(--dark-bg-tertiary);
+    border-bottom: 1px solid var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+.card-body {
+    color: var(--dark-text-primary);
+}
+
+/* Form Styles */
+.form-control, .form-select {
+    background-color: var(--dark-bg-tertiary);
+    border: 1px solid var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+.form-control:focus, .form-select:focus {
+    background-color: var(--dark-bg-secondary);
+    border-color: var(--dark-accent-primary);
+    color: var(--dark-text-primary);
+}
+
+.form-control::placeholder {
+    color: var(--dark-text-muted);
+}
+
+.form-label {
+    color: var(--dark-text-primary);
+}
+
+/* List Group */
+.list-group-item {
+    background-color: var(--dark-bg-secondary);
+    border: 1px solid var(--dark-border);
+    color: var(--dark-text-primary);
+}
+
+.list-group-item:hover {
+    background-color: var(--dark-bg-tertiary);
+}
+
+/* Badge Styles */
+.badge {
+    font-weight: 500;
+}
+
+.badge.bg-primary {
+    background-color: var(--dark-accent-secondary) !important;
+}
+
+.badge.bg-secondary {
+    background-color: var(--dark-bg-elevated) !important;
+    border: 1px solid var(--dark-border);
+}
+
+/* Alert Styles */
+.alert-success {
+    background-color: rgba(63, 185, 80, 0.15);
+    border-color: var(--dark-success);
+    color: var(--dark-success);
+}
+
+.alert-danger {
+    background-color: rgba(248, 81, 73, 0.15);
+    border-color: var(--dark-danger);
+    color: var(--dark-danger);
+}
+
+/* Spinner */
+.spinner-border {
+    border-color: var(--dark-accent-primary);
+    border-right-color: transparent;
+}
+
+.text-muted {
+    color: var(--dark-text-secondary) !important;
 }
 
 .content {
@@ -41,9 +177,10 @@ h1:focus {
 }
 
 .blazor-error-boundary {
-    background: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTYiIGhlaWdodD0iNDkiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIG92ZXJmbG93PSJoaWRkZW4iPjxkZWZzPjxjbGlwUGF0aCBpZD0iY2xpcDAiPjxyZWN0IHg9IjIzNSIgeT0iNTEiIHdpZHRoPSI1NiIgaGVpZ2h0PSI0OSIvPjwvY2xpcFBhdGg+PC9kZWZzPjxnIGNsaXAtcGF0aD0idXJsKCNjbGlwMCkiIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yMzUgLTUxKSI+PHBhdGggZD0iTTI2My41MDYgNTFDMjY0LjcxNyA1MSAyNjUuODEzIDUxLjQ4MzcgMjY2LjYwNiA1Mi4yNjU4TDI2Ny4wNTIgNTIuNzk4NyAyNjcuNTM5IDUzLjYyODMgMjkwLjE4NSA5Mi4xODMxIDI5MC41NDUgOTIuNzk1IDI5MC42NTYgOTIuOTk2QzI5MC44NzcgOTMuNTEzIDI5MSA5NC4wODE1IDI5MSA5NC42NzgyIDI5MSA5Ny4wNjUxIDI4OS4wMzggOTkgMjg2LjYxNyA5OUwyNDAuMzgzIDk5QzIzNy45NjMgOTkgMjM2IDk3LjA2NTEgMjM2IDk0LjY3ODIgMjM2IDk0LjM3OTkgMjM2LjAzMSA5NC4wODg2IDIzNi4wODkgOTMuODA3MkwyMzYuMzM4IDkzLjAxNjIgMjM2Ljg1OCA5Mi4xMzE0IDI1OS40NzMgNTMuNjI5NCAyNTkuOTYxIDUyLjc5ODUgMjYwLjQwNyA1Mi4yNjU4QzI2MS4yIDUxLjQ4MzcgMjYyLjI5NiA1MSAyNjMuNTA2IDUxWk0yNjMuNTg2IDY2LjAxODNDMjYwLjczNyA2Ni4wMTgzIDI1OS4zMTMgNjcuMTI0NSAyNTkuMzEzIDY5LjMzNyAyNTkuMzEzIDY5LjYxMDIgMjU5LjMzMiA2OS44NjA4IDI1OS4zNzEgNzAuMDg4N0wyNjEuNzk1IDg0LjAxNjEgMjY1LjM4IDg0LjAxNjEgMjY3LjgyMSA2OS43NDc1QzI2Ny44NiA2OS43MzA5IDI2Ny44NzkgNjkuNTg3NyAyNjcuODc5IDY5LjMxNzkgMjY3Ljg3OSA2Ny4xMTgyIDI2Ni40NDggNjYuMDE4MyAyNjMuNTg2IDY2LjAxODNaTTI2My41NzYgODYuMDU0N0MyNjEuMDQ5IDg2LjA1NDcgMjU5Ljc4NiA4Ny4zMDA1IDI1OS43ODYgODkuNzkyMSAyNTkuNzg2IDkyLjI4MzcgMjYxLjA0OSA5My41Mjk1IDI2My41NzYgOTMuNTI5NSAyNjYuMTE2IDkzLjUyOTUgMjY3LjM4NyA5Mi4yODM3IDI2Ny4zODcgODkuNzkyMSAyNjcuMzg3IDg3LjMwMDUgMjY2LjExNiA4Ni4wNTQ3IDI2My41NzYgODYuMDU0N1oiIGZpbGw9IiNGRkU1MDAiIGZpbGwtcnVsZT0iZXZlbm9kZCIvPjwvZz48L3N2Zz4=) no-repeat 1rem/1.8rem, #b32121;
+    background: linear-gradient(135deg, #da4453 0%, #89216b 100%);
     padding: 1rem 1rem 1rem 3.7rem;
     color: white;
+    border-radius: 4px;
 }
 
     .blazor-error-boundary::after {
@@ -51,11 +188,17 @@ h1:focus {
     }
 
 .darker-border-checkbox.form-check-input {
-    border-color: #929292;
+    border-color: var(--dark-border);
+    background-color: var(--dark-bg-tertiary);
+}
+
+.darker-border-checkbox.form-check-input:checked {
+    background-color: var(--dark-accent-primary);
+    border-color: var(--dark-accent-primary);
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
-    color: var(--bs-secondary-color);
+    color: var(--dark-text-muted);
     text-align: end;
 }
 
