@@ -16,7 +16,7 @@ namespace IdeaGraph.Client.Services
         {
             try
             {
-                var ideas = await _httpClient.GetFromJsonAsync<List<Idea>>("ideas");
+                var ideas = await _httpClient.GetFromJsonAsync<List<Idea>>("api/ideas");
                 return ideas ?? new List<Idea>();
             }
             catch (Exception)
@@ -29,7 +29,7 @@ namespace IdeaGraph.Client.Services
         {
             try
             {
-                var response = await _httpClient.PostAsJsonAsync("idea", request);
+                var response = await _httpClient.PostAsJsonAsync("api/ideas", request);
                 response.EnsureSuccessStatusCode();
                 return await response.Content.ReadFromJsonAsync<Idea>();
             }

@@ -9,15 +9,9 @@ namespace IdeaGraph.Client
         {
             var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
-            // Configure HttpClient for IdeaService
+            // Configure HttpClient for IdeaService to call the ASP.NET Core server API
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
-            builder.Services.AddScoped<IdeaService>(sp =>
-            {
-                var httpClient = sp.GetRequiredService<HttpClient>();
-                // Use server base address for API calls
-                httpClient.BaseAddress = new Uri(builder.Configuration["IdeaGraphApi:BaseUrl"] ?? builder.HostEnvironment.BaseAddress);
-                return new IdeaService(httpClient);
-            });
+            builder.Services.AddScoped<IdeaService>();
 
             await builder.Build().RunAsync();
         }
