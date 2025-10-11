@@ -1,5 +1,6 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from datetime import datetime
 import os, uuid, httpx, math
@@ -34,7 +35,7 @@ EMBED_MODEL    = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 CHROMA_API_KEY = os.getenv("CHROMA_API_KEY", "")
 CHROMA_TENANT  = os.getenv("CHROMA_TENANT", "")
 CHROMA_DATABASE = os.getenv("CHROMA_DATABASE", "IdeaGraph")
-X-Api-Key = os.getenv("X-Api-Key", "")
+X_API_KEY = os.getenv("X_API_KEY", "")
 ALLOW_ORIGINS  = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "").split(",") if o.strip()]
 
 if not OPENAI_API_KEY:
@@ -46,6 +47,25 @@ logger.info(f"Embedding model: {EMBED_MODEL}")
 logger.info(f"ChromaDB database: {CHROMA_DATABASE}")
 if ALLOW_ORIGINS:
     logger.info(f"CORS enabled for origins: {ALLOW_ORIGINS}")
+
+# --- API Key Authentication ---
+api_key_header = APIKeyHeader(name="X-Api-Key", auto_error=False)
+
+async def verify_api_key(api_key: str = Depends(api_key_header)):
+    if not X_API_KEY:
+        # If no API key is configured, allow all requests
+        logger.warning("No X_API_KEY configured in environment - authentication is disabled!")
+        return api_key
+    
+    if api_key != X_API_KEY:
+        logger.warning(f"Invalid API key attempt from request")
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid or missing API key"
+        )
+    return api_key
+
+logger.info("API key authentication configured" if X_API_KEY else "API key authentication is DISABLED")
 
 # --- App + CORS ---
 logger.info("Initializing FastAPI application...")
@@ -125,7 +145,7 @@ async def embed_text(text: str):
 
 # --- API ---
 @app.get("/health")
-def health():
+def health(api_key: str = Depends(verify_api_key)):
     logger.debug("Health check requested")
     try:
         collections = client.list_collections()
@@ -137,7 +157,7 @@ def health():
         raise HTTPException(status_code=500, detail="Health check failed")
 
 @app.post("/idea")
-async def create_idea(idea: IdeaIn):
+async def create_idea(idea: IdeaIn, api_key: str = Depends(verify_api_key)):
     logger.info(f"Creating new idea: '{idea.title}'")
     logger.debug(f"Idea details - title: '{idea.title}', description length: {len(idea.description)}, tags: {idea.tags}")
     
@@ -159,7 +179,7 @@ async def create_idea(idea: IdeaIn):
         raise HTTPException(status_code=500, detail=f"Failed to create idea: {str(e)}")
 
 @app.get("/ideas")
-def list_ideas():
+def list_ideas(api_key: str = Depends(verify_api_key)):
     logger.debug("Listing all ideas")
     try:
         res = ideas.get()
@@ -184,7 +204,7 @@ def list_ideas():
         raise HTTPException(status_code=500, detail=f"Failed to list ideas: {str(e)}")
 
 @app.get("/ideas/{idea_id}")
-def get_idea(idea_id: str):
+def get_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
     logger.debug(f"Fetching idea with ID: {idea_id}")
     try:
         res = ideas.get(ids=[idea_id])
@@ -222,7 +242,7 @@ def get_idea(idea_id: str):
         raise HTTPException(status_code=500, detail=f"Failed to get idea: {str(e)}")
 
 @app.put("/ideas/{idea_id}")
-async def update_idea(idea_id: str, idea_update: IdeaUpdateIn):
+async def update_idea(idea_id: str, idea_update: IdeaUpdateIn, api_key: str = Depends(verify_api_key)):
     logger.info(f"Updating idea with ID: {idea_id}")
     logger.debug(f"Update details - title: {idea_update.title}, description length: {len(idea_update.description or '')}, tags: {idea_update.tags}")
     
@@ -271,7 +291,7 @@ async def update_idea(idea_id: str, idea_update: IdeaUpdateIn):
         raise HTTPException(status_code=500, detail=f"Failed to update idea: {str(e)}")
 
 @app.delete("/ideas/{idea_id}")
-def delete_idea(idea_id: str):
+def delete_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
     logger.info(f"Deleting idea with ID: {idea_id}")
     
     try:
@@ -300,7 +320,7 @@ def delete_idea(idea_id: str):
 
 
 @app.get("/similar/{idea_id}")
-def similar(idea_id: str, k: int = 5):
+def similar(idea_id: str, k: int = 5, api_key: str = Depends(verify_api_key)):
     logger.debug(f"Finding similar ideas for: {idea_id} (k={k})")
     try:
         base = ideas.get(ids=[idea_id])
@@ -334,7 +354,7 @@ def similar(idea_id: str, k: int = 5):
         raise HTTPException(status_code=500, detail=f"Failed to find similar ideas: {str(e)}")
 
 @app.post("/relation")
-def add_relation(rel: RelationIn):
+def add_relation(rel: RelationIn, api_key: str = Depends(verify_api_key)):
     logger.info(f"Adding relation: {rel.source_id} -> {rel.target_id} ({rel.relation_type})")
     logger.debug(f"Relation details - weight: {rel.weight}")
     
@@ -350,7 +370,7 @@ def add_relation(rel: RelationIn):
         raise HTTPException(status_code=500, detail=f"Failed to add relation: {str(e)}")
 
 @app.get("/relations/{idea_id}")
-def list_relations(idea_id: str):
+def list_relations(idea_id: str, api_key: str = Depends(verify_api_key)):
     logger.debug(f"Listing relations for idea: {idea_id}")
     try:
         rels = relations.get(where={"source_id": idea_id})

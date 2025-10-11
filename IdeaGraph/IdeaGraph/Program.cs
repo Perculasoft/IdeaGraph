@@ -22,10 +22,16 @@ namespace IdeaGraph
 
             // Configure HttpClient for FastAPI (used by controllers)
             var fastApiUrl = builder.Configuration["FastAPI:BaseUrl"] ?? "http://localhost:8000/";
+            var xApiKey = builder.Configuration["IdeaGraphApi:X-Api-Key"] ?? "";
             builder.Services.AddHttpClient("FastAPI", client =>
             {
                 client.BaseAddress = new Uri(fastApiUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
+                // Add X-Api-Key header if configured
+                if (!string.IsNullOrEmpty(xApiKey))
+                {
+                    client.DefaultRequestHeaders.Add("X-Api-Key", xApiKey);
+                }
             });
 
             // Configure HttpClient for IdeaService (now points to local API)
