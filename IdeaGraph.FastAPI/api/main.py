@@ -7,6 +7,11 @@ import os, uuid, httpx, math
 import chromadb
 from chromadb.config import Settings
 
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 # --- ENV ---
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_ORG_ID  = os.getenv("OPENAI_ORG_ID", "")
