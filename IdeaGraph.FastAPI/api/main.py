@@ -80,7 +80,9 @@ async def embed_text(text: str):
 # --- API ---
 @app.get("/health")
 def health():
-    return {"status": "ok", "collections": client.list_collections()}
+    collections = client.list_collections()
+    collection_names = [col.name for col in collections]
+    return {"status": "ok", "collections": collection_names}
 
 @app.post("/idea")
 async def create_idea(idea: IdeaIn):
