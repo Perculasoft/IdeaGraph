@@ -55,3 +55,14 @@
     transform: translateX(4px);
     box-shadow: 0 2px 8px rgba(88, 166, 255, 0.1);
 }
+
+.idea-description {
+    padding: 0.75rem;
+    background-color: var(--dark-bg-tertiary);
+    border-left: 3px solid var(--dark-accent-primary);
+    border-radius: 4px;
+    color: var(--dark-text-secondary);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}

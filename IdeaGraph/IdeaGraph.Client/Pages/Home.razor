@@ -107,20 +107,28 @@
                 <ul class="list-group list-group-flush">
                     @foreach (var idea in ideas)
                     {
-                        <li class="list-group-item d-flex justify-content-between align-items-start">
-                            <div class="ms-2 me-auto">
-                                <div class="fw-bold">@idea.Title</div>
-                                @if (idea.Tags.Any())
-                                {
-                                    <div class="mt-1">
-                                        @foreach (var tag in idea.Tags)
-                                        {
-                                            <span class="badge bg-secondary me-1">@tag</span>
-                                        }
-                                    </div>
-                                }
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start" @onclick="() => ToggleDescription(idea.Id)" style="cursor: pointer;">
+                                <div class="ms-2 me-auto">
+                                    <div class="fw-bold">@idea.Title</div>
+                                    @if (idea.Tags.Any())
+                                    {
+                                        <div class="mt-1">
+                                            @foreach (var tag in idea.Tags)
+                                            {
+                                                <span class="badge bg-secondary me-1">@tag</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <span class="badge bg-primary rounded-pill" title="Created: @idea.CreatedAt">@GetRelativeTime(idea.CreatedAt)</span>
                             </div>
-                            <span class="badge bg-primary rounded-pill" title="Created: @idea.CreatedAt">@GetRelativeTime(idea.CreatedAt)</span>
+                            @if (expandedIdeas.Contains(idea.Id) && !string.IsNullOrEmpty(idea.Description))
+                            {
+                                <div class="idea-description mt-2">
+                                    @idea.Description
+                                </div>
+                            }
                         </li>
                     }
                 </ul>
@@ -137,6 +145,7 @@
     private bool isCreating = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
+    private HashSet<string> expandedIdeas = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -254,6 +263,18 @@
         }
 
         return "Unknown";
+    }
+
+    private void ToggleDescription(string ideaId)
+    {
+        if (expandedIdeas.Contains(ideaId))
+        {
+            expandedIdeas.Remove(ideaId);
+        }
+        else
+        {
+            expandedIdeas.Add(ideaId);
+        }
     }
 }
 
