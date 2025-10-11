@@ -77,5 +77,64 @@ namespace IdeaGraph.Controllers
                 return StatusCode(500, new { error = "Failed to create idea", detail = ex.Message });
             }
         }
+
+        [HttpPut("{id}")]
+        public async Task<ActionResult<Idea>> UpdateIdea(string id, [FromBody] IdeaUpdateRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Forwarding PUT /ideas/{id} to FastAPI", id);
+                var response = await _httpClient.PutAsJsonAsync($"ideas/{id}", request);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogWarning("Idea {id} not found in FastAPI", id);
+                    return NotFound(new { error = "Idea not found" });
+                }
+                
+                response.EnsureSuccessStatusCode();
+                var updatedIdea = await response.Content.ReadFromJsonAsync<Idea>();
+                return Ok(updatedIdea);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Idea {id} not found in FastAPI", id);
+                return NotFound(new { error = "Idea not found" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating idea {id} in FastAPI", id);
+                return StatusCode(500, new { error = "Failed to update idea", detail = ex.Message });
+            }
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult> DeleteIdea(string id)
+        {
+            try
+            {
+                _logger.LogInformation("Forwarding DELETE /ideas/{id} to FastAPI", id);
+                var response = await _httpClient.DeleteAsync($"ideas/{id}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogWarning("Idea {id} not found in FastAPI", id);
+                    return NotFound(new { error = "Idea not found" });
+                }
+                
+                response.EnsureSuccessStatusCode();
+                return Ok(new { message = "Idea deleted successfully", id });
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Idea {id} not found in FastAPI", id);
+                return NotFound(new { error = "Idea not found" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting idea {id} in FastAPI", id);
+                return StatusCode(500, new { error = "Failed to delete idea", detail = ex.Message });
+            }
+        }
     }
 }

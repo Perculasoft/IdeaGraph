@@ -32,6 +32,18 @@ namespace IdeaGraph.Models
         public List<string> Tags { get; set; } = new();
     }
 
+    public class IdeaUpdateRequest
+    {
+        [JsonPropertyName("title")]
+        public string? Title { get; set; }
+        
+        [JsonPropertyName("description")]
+        public string? Description { get; set; }
+        
+        [JsonPropertyName("tags")]
+        public List<string>? Tags { get; set; }
+    }
+
     public class IdeaDetail : Idea
     {
         [JsonPropertyName("relations")]
