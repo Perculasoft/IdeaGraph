@@ -107,20 +107,34 @@
                 <ul class="list-group list-group-flush">
                     @foreach (var idea in ideas)
                     {
-                        <li class="list-group-item d-flex justify-content-between align-items-start">
-                            <div class="ms-2 me-auto">
-                                <div class="fw-bold">@idea.Title</div>
-                                @if (idea.Tags.Any())
-                                {
-                                    <div class="mt-1">
-                                        @foreach (var tag in idea.Tags)
-                                        {
-                                            <span class="badge bg-secondary me-1">@tag</span>
-                                        }
-                                    </div>
-                                }
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="ms-2 me-auto flex-grow-1">
+                                    <div class="fw-bold">@idea.Title</div>
+                                    @if (!string.IsNullOrEmpty(idea.Description))
+                                    {
+                                        <p class="mb-1 text-muted">@idea.Description</p>
+                                    }
+                                    @if (idea.Tags.Any())
+                                    {
+                                        <div class="mt-1">
+                                            @foreach (var tag in idea.Tags)
+                                            {
+                                                <span class="badge bg-secondary me-1">@tag</span>
+                                            }
+                                        </div>
+                                    }
+                                </div>
+                                <div class="d-flex align-items-start gap-2">
+                                    <span class="badge bg-primary rounded-pill" title="Created: @idea.CreatedAt">@GetRelativeTime(idea.CreatedAt)</span>
+                                    <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditIdea(idea)" title="Edit">
+                                        ✏️
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeleteIdea(idea)" title="Delete">
+                                        🗑️
+                                    </button>
+                                </div>
                             </div>
-                            <span class="badge bg-primary rounded-pill" title="Created: @idea.CreatedAt">@GetRelativeTime(idea.CreatedAt)</span>
                         </li>
                     }
                 </ul>
@@ -128,6 +142,114 @@
         </div>
     </div>
 </div>
+
+<!-- Edit Modal -->
+@if (editingIdea != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Idea</h5>
+                    <button type="button" class="btn-close" @onclick="CancelEdit"></button>
+                </div>
+                <div class="modal-body">
+                    <EditForm Model="@editRequest" OnValidSubmit="@HandleUpdateIdea">
+                        <div class="mb-3">
+                            <label for="editTitle" class="form-label">Title</label>
+                            <InputText id="editTitle" class="form-control" @bind-Value="editRequest.Title" placeholder="Enter idea title" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="editDescription" class="form-label">Description</label>
+                            <InputTextArea id="editDescription" class="form-control" @bind-Value="editRequest.Description" rows="3" placeholder="Enter idea description" />
+                        </div>
+                        <div class="mb-3">
+                            <label for="editTags" class="form-label">Tags</label>
+                            <div class="tags-input-container">
+                                <div class="tags-chips">
+                                    @if (editRequest.Tags != null)
+                                    {
+                                        @foreach (var tag in editRequest.Tags)
+                                        {
+                                            <span class="tag-chip">
+                                                @tag
+                                                <button type="button" class="tag-remove" @onclick="() => RemoveEditTag(tag)">×</button>
+                                            </span>
+                                        }
+                                    }
+                                </div>
+                                <input type="text" 
+                                       class="form-control mt-2" 
+                                       @bind="editCurrentTag" 
+                                       @onkeydown="HandleEditTagInput"
+                                       placeholder="Type tag and press Enter or comma" />
+                            </div>
+                        </div>
+                        @if (!string.IsNullOrEmpty(editErrorMessage))
+                        {
+                            <div class="alert alert-danger" role="alert">
+                                @editErrorMessage
+                            </div>
+                        }
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                            <button type="submit" class="btn btn-primary" disabled="@isUpdating">
+                                @if (isUpdating)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span>Updating...</span>
+                                }
+                                else
+                                {
+                                    <span>Update Idea</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete Confirmation Modal -->
+@if (deletingIdea != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the idea "<strong>@deletingIdea.Title</strong>"?</p>
+                    <p class="text-muted">This action cannot be undone.</p>
+                    @if (!string.IsNullOrEmpty(deleteErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @deleteErrorMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="HandleDeleteIdea" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Deleting...</span>
+                        }
+                        else
+                        {
+                            <span>Delete</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private List<Idea> ideas = new();
@@ -137,6 +259,18 @@
     private bool isCreating = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
+
+    // Edit state
+    private Idea? editingIdea = null;
+    private IdeaUpdateRequest editRequest = new();
+    private string editCurrentTag = string.Empty;
+    private bool isUpdating = false;
+    private string editErrorMessage = string.Empty;
+
+    // Delete state
+    private Idea? deletingIdea = null;
+    private bool isDeleting = false;
+    private string deleteErrorMessage = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -254,6 +388,144 @@
         }
 
         return "Unknown";
+    }
+
+    // Edit methods
+    private void StartEditIdea(Idea idea)
+    {
+        editingIdea = idea;
+        editRequest = new IdeaUpdateRequest
+        {
+            Title = idea.Title,
+            Description = idea.Description,
+            Tags = new List<string>(idea.Tags)
+        };
+        editCurrentTag = string.Empty;
+        editErrorMessage = string.Empty;
+    }
+
+    private void CancelEdit()
+    {
+        editingIdea = null;
+        editRequest = new IdeaUpdateRequest();
+        editCurrentTag = string.Empty;
+        editErrorMessage = string.Empty;
+    }
+
+    private async Task HandleUpdateIdea()
+    {
+        if (editingIdea == null)
+            return;
+
+        if (string.IsNullOrWhiteSpace(editRequest.Title))
+        {
+            editErrorMessage = "Title is required";
+            return;
+        }
+
+        isUpdating = true;
+        editErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var updated = await IdeaService.UpdateIdeaAsync(editingIdea.Id, editRequest);
+            if (updated != null)
+            {
+                successMessage = "Idea updated successfully!";
+                CancelEdit();
+                await LoadIdeas();
+            }
+            else
+            {
+                editErrorMessage = "Failed to update idea. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            editErrorMessage = $"Error updating idea: {ex.Message}";
+        }
+        finally
+        {
+            isUpdating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleEditTagInput(KeyboardEventArgs e)
+    {
+        if ((e.Key == "Enter" || e.Key == ",") && !string.IsNullOrWhiteSpace(editCurrentTag))
+        {
+            AddEditTag();
+        }
+    }
+
+    private void AddEditTag()
+    {
+        var trimmedTag = editCurrentTag.Trim().TrimEnd(',');
+        if (!string.IsNullOrWhiteSpace(trimmedTag))
+        {
+            if (editRequest.Tags == null)
+                editRequest.Tags = new List<string>();
+            
+            if (!editRequest.Tags.Contains(trimmedTag))
+            {
+                editRequest.Tags.Add(trimmedTag);
+                editCurrentTag = string.Empty;
+            }
+        }
+    }
+
+    private void RemoveEditTag(string tag)
+    {
+        editRequest.Tags?.Remove(tag);
+    }
+
+    // Delete methods
+    private void ConfirmDeleteIdea(Idea idea)
+    {
+        deletingIdea = idea;
+        deleteErrorMessage = string.Empty;
+    }
+
+    private void CancelDelete()
+    {
+        deletingIdea = null;
+        deleteErrorMessage = string.Empty;
+    }
+
+    private async Task HandleDeleteIdea()
+    {
+        if (deletingIdea == null)
+            return;
+
+        isDeleting = true;
+        deleteErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var success = await IdeaService.DeleteIdeaAsync(deletingIdea.Id);
+            if (success)
+            {
+                successMessage = "Idea deleted successfully!";
+                CancelDelete();
+                await LoadIdeas();
+            }
+            else
+            {
+                deleteErrorMessage = "Failed to delete idea. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = $"Error deleting idea: {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
     }
 }
 

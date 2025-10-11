@@ -38,5 +38,32 @@ namespace IdeaGraph.Client.Services
                 return null;
             }
         }
+
+        public async Task<Idea?> UpdateIdeaAsync(string id, IdeaUpdateRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PutAsJsonAsync($"api/ideas/{id}", request);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<Idea>();
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public async Task<bool> DeleteIdeaAsync(string id)
+        {
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"api/ideas/{id}");
+                return response.IsSuccessStatusCode;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
     }
 }

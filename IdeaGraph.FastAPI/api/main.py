@@ -84,6 +84,11 @@ class IdeaIn(BaseModel):
     description: str = ""
     tags: list[str] = []
 
+class IdeaUpdateIn(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    tags: list[str] | None = None
+
 class RelationIn(BaseModel):
     source_id: str
     target_id: str
@@ -214,6 +219,84 @@ def get_idea(idea_id: str):
     except Exception as e:
         logger.error(f"Failed to get idea {idea_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to get idea: {str(e)}")
+
+@app.put("/ideas/{idea_id}")
+async def update_idea(idea_id: str, idea_update: IdeaUpdateIn):
+    logger.info(f"Updating idea with ID: {idea_id}")
+    logger.debug(f"Update details - title: {idea_update.title}, description length: {len(idea_update.description or '')}, tags: {idea_update.tags}")
+    
+    try:
+        # First check if idea exists
+        res = ideas.get(ids=[idea_id])
+        if not res["ids"]:
+            logger.warning(f"Idea not found for update: {idea_id}")
+            raise HTTPException(404, "Idea not found")
+        
+        # Get current metadata
+        current_meta = res["metadatas"][0] or {}
+        
+        # Update only provided fields
+        updated_title = idea_update.title if idea_update.title is not None else current_meta.get("title", "")
+        updated_description = idea_update.description if idea_update.description is not None else current_meta.get("description", "")
+        updated_tags = idea_update.tags if idea_update.tags is not None else [t.strip() for t in current_meta.get("tags", "").split(",") if t.strip()]
+        
+        # Create new document for embedding
+        doc = f"{updated_title}\n\n{updated_description}\n\nTags: {', '.join(updated_tags)}"
+        vec = await embed_text(doc)
+        
+        # Update metadata
+        new_meta = {
+            "title": updated_title,
+            "description": updated_description,
+            "tags": ",".join(updated_tags),
+            "created_at": current_meta.get("created_at", datetime.utcnow().isoformat())
+        }
+        
+        # Update in ChromaDB
+        ideas.update(ids=[idea_id], documents=[doc], embeddings=[vec], metadatas=[new_meta])
+        logger.info(f"Successfully updated idea with ID: {idea_id}")
+        
+        return {
+            "id": idea_id,
+            "title": new_meta["title"],
+            "description": new_meta["description"],
+            "tags": updated_tags,
+            "created_at": new_meta["created_at"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update idea {idea_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to update idea: {str(e)}")
+
+@app.delete("/ideas/{idea_id}")
+def delete_idea(idea_id: str):
+    logger.info(f"Deleting idea with ID: {idea_id}")
+    
+    try:
+        # Check if idea exists
+        res = ideas.get(ids=[idea_id])
+        if not res["ids"]:
+            logger.warning(f"Idea not found for deletion: {idea_id}")
+            raise HTTPException(404, "Idea not found")
+        
+        # Delete the idea
+        ideas.delete(ids=[idea_id])
+        
+        # Also delete any relations where this idea is the source
+        rels = relations.get(where={"source_id": idea_id})
+        if rels["ids"]:
+            relations.delete(ids=rels["ids"])
+            logger.info(f"Deleted {len(rels['ids'])} relations for idea {idea_id}")
+        
+        logger.info(f"Successfully deleted idea with ID: {idea_id}")
+        return {"message": "Idea deleted successfully", "id": idea_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete idea {idea_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to delete idea: {str(e)}")
+
 
 @app.get("/similar/{idea_id}")
 def similar(idea_id: str, k: int = 5):
