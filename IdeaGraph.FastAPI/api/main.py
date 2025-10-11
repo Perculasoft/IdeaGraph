@@ -23,9 +23,6 @@ ALLOW_ORIGINS  = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "").split(",") i
 if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY is required")
 
-if not CHROMA_API_KEY:
-    raise RuntimeError("CHROMA_API_KEY is required")
-
 # --- App + CORS ---
 app = FastAPI(title="IdeaGraph API", version="0.1")
 if ALLOW_ORIGINS:
@@ -38,11 +35,7 @@ if ALLOW_ORIGINS:
     )
 
 # --- Chroma Client/Collections ---
-client = chromadb.CloudClient(
-    api_key=CHROMA_API_KEY,
-    tenant=CHROMA_TENANT if CHROMA_TENANT else None,
-    database=CHROMA_DATABASE
-)
+client = chromadb.PersistentClient(path=CHROMA_DIR)
 ideas = client.get_or_create_collection(name="ideas")        # ids, documents, embeddings, metadatas
 relations = client.get_or_create_collection(name="relations")# store edges as docs w/ metadata
 
