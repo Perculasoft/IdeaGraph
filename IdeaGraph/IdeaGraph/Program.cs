@@ -14,8 +14,19 @@ namespace IdeaGraph
                 .AddInteractiveServerComponents()
                 .AddInteractiveWebAssemblyComponents();
 
-            // Configure HttpClient for IdeaService
-            var ideaGraphApiUrl = builder.Configuration["IdeaGraphApi:BaseUrl"] ?? "http://localhost:8000/";
+            // Add API Controllers
+            builder.Services.AddControllers();
+
+            // Configure HttpClient for FastAPI (used by controllers)
+            var fastApiUrl = builder.Configuration["FastAPI:BaseUrl"] ?? "http://localhost:8000/";
+            builder.Services.AddHttpClient("FastAPI", client =>
+            {
+                client.BaseAddress = new Uri(fastApiUrl);
+                client.Timeout = TimeSpan.FromSeconds(30);
+            });
+
+            // Configure HttpClient for IdeaService (now points to local API)
+            var ideaGraphApiUrl = builder.Configuration["IdeaGraphApi:BaseUrl"] ?? "https://localhost:5001/api/";
             builder.Services.AddHttpClient<IdeaService>(client =>
             {
                 client.BaseAddress = new Uri(ideaGraphApiUrl);
@@ -40,6 +51,10 @@ namespace IdeaGraph
             app.UseAntiforgery();
 
             app.MapStaticAssets();
+            
+            // Map API Controllers
+            app.MapControllers();
+            
             app.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode()
                 .AddInteractiveWebAssemblyRenderMode()
