@@ -92,11 +92,11 @@ async def create_idea(idea: IdeaIn):
     meta = {
         "title": idea.title,
         "description": idea.description,
-        "tags": idea.tags,
+        "tags": ",".join(idea.tags),  # Convert list to comma-separated string for ChromaDB
         "created_at": datetime.utcnow().isoformat()
     }
     ideas.add(ids=[_id], documents=[doc], embeddings=[vec], metadatas=[meta])
-    return {"id": _id, **meta, "relations": [], "impact_score": 0.0}
+    return {"id": _id, "title": meta["title"], "description": meta["description"], "tags": idea.tags, "created_at": meta["created_at"], "relations": [], "impact_score": 0.0}
 
 @app.get("/ideas")
 def list_ideas():
@@ -104,11 +104,13 @@ def list_ideas():
     out = []
     for i, _id in enumerate(res["ids"]):
         meta = res["metadatas"][i] or {}
+        tags_str = meta.get("tags", "")
+        tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
         out.append({
             "id": _id,
             "title": meta.get("title",""),
             "description": meta.get("description",""),
-            "tags": meta.get("tags", []),
+            "tags": tags_list,
             "created_at": meta.get("created_at", "")
         })
     # optional: sort by created_at desc (string ISO OK)
@@ -133,11 +135,13 @@ def get_idea(idea_id: str):
             "relation_type": m.get("relation_type"),
             "weight": m.get("weight", 1.0)
         })
+    tags_str = meta.get("tags", "")
+    tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
     return {
         "id": idea_id,
         "title": meta.get("title",""),
         "description": meta.get("description",""),
-        "tags": meta.get("tags", []),
+        "tags": tags_list,
         "created_at": meta.get("created_at",""),
         "relations": edges
     }
@@ -155,11 +159,13 @@ def similar(idea_id: str, k: int = 5):
         if _id == idea_id:  # skip self
             continue
         meta = res["metadatas"][0][i] or {}
+        tags_str = meta.get("tags", "")
+        tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
         out.append({
             "id": _id,
             "title": meta.get("title",""),
             "description": meta.get("description",""),
-            "tags": meta.get("tags", []),
+            "tags": tags_list,
             "created_at": meta.get("created_at",""),
             "distance": float(res["distances"][0][i]) if "distances" in res else None
         })
