@@ -41,6 +41,9 @@ CHROMA_DATABASE=IdeaGraph
 
 # Optional: CORS allowed origins (comma-separated)
 ALLOW_ORIGINS=http://localhost:3000,http://localhost:5173
+
+# Optional: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL) - default: INFO
+LOG_LEVEL=INFO
 ```
 
 ### 3. Run the Application
@@ -97,3 +100,41 @@ python validate_chromadb_config.py
 - **Vector Database**: ChromaDB Cloud for efficient vector storage and retrieval
 - **Relation Tracking**: Track relationships between ideas (depends_on, extends, contradicts, synergizes_with)
 - **CORS Support**: Configurable CORS for frontend integration
+- **Comprehensive Logging**: Structured logging with configurable log levels for error tracking and debugging
+
+## Logging
+
+The application includes comprehensive logging functionality to help with debugging and monitoring:
+
+### Log Levels
+
+You can configure the log level using the `LOG_LEVEL` environment variable in your `.env` file:
+
+- `DEBUG`: Detailed information for debugging (includes all operations)
+- `INFO`: General information about application operation (default)
+- `WARNING`: Warning messages for potentially problematic situations
+- `ERROR`: Error messages for failures
+- `CRITICAL`: Critical errors that may cause application failure
+
+### Log Format
+
+All log messages include:
+- Timestamp
+- Logger name (module)
+- Log level
+- Message content
+
+Example log output:
+```
+2025-01-15 10:30:45,123 - api.main - INFO - Connecting to ChromaDB Cloud...
+2025-01-15 10:30:46,234 - api.main - INFO - Successfully connected to ChromaDB Cloud
+2025-01-15 10:30:47,345 - api.main - INFO - Creating new idea: 'My Great Idea'
+```
+
+### What is Logged
+
+- **Startup**: Application initialization and configuration
+- **API Requests**: All endpoint access (INFO level)
+- **Operations**: Successful operations like idea creation, retrieval (INFO level)
+- **Errors**: All errors with full stack traces (ERROR level)
+- **Debug Info**: Detailed operation information when LOG_LEVEL=DEBUG
