@@ -1,6 +1,7 @@
-using Microsoft.AspNetCore.Mvc;
 using IdeaGraph.Models;
-using IdeaGraph.Services;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging;
+using System.Net.Http;
 
 namespace IdeaGraph.Controllers
 {
@@ -8,11 +9,6 @@ namespace IdeaGraph.Controllers
     [Route("api/[controller]")]
     public class IdeasController : ControllerBase
     {
-        private readonly IdeaService _ideaService;
-
-        public IdeasController(IdeaService ideaService)
-        {
-            _ideaService = ideaService;
         private readonly HttpClient _httpClient;
         private readonly ILogger<IdeasController> _logger;
 
@@ -27,38 +23,8 @@ namespace IdeaGraph.Controllers
         {
             try
             {
-                var ideas = await _ideaService.GetIdeasAsync();
-                return Ok(ideas);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
-            }
-        }
-
-        [HttpPost]
-        public async Task<ActionResult<Idea>> CreateIdea([FromBody] IdeaCreateRequest request)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(request.Title))
-                {
-                    return BadRequest(new { error = "Title is required" });
-                }
-
-                var idea = await _ideaService.CreateIdeaAsync(request);
-                if (idea == null)
-                {
-                    return StatusCode(500, new { error = "Failed to create idea" });
-                }
-
-                return CreatedAtAction(nameof(GetIdeas), new { id = idea.Id }, idea);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { error = ex.Message });
                 _logger.LogInformation("Forwarding GET /ideas to FastAPI");
-                var response = await _httpClient.GetFromJsonAsync<List<Idea>>("ideas");
+                var response = await _httpClient.GetFromJsonAsync<List<Idea>>($"ideas");
                 return Ok(response);
             }
             catch (Exception ex)
@@ -68,13 +34,43 @@ namespace IdeaGraph.Controllers
             }
         }
 
+        [HttpPost]
+        public async Task<ActionResult<Idea>> CreateIdea([FromBody] IdeaCreateRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Forwarding POST /idea to FastAPI: {Title}", request.Title);
+
+                if (string.IsNullOrWhiteSpace(request.Title))
+                {
+                    return BadRequest(new { error = "Title is required" });
+                }
+
+                var response = await _httpClient.PostAsJsonAsync("idea", request);
+                response.EnsureSuccessStatusCode();
+
+                var createdIdea = await response.Content.ReadFromJsonAsync<Idea>();
+                return Ok(createdIdea);
+
+             
+            }
+            catch (Exception ex)
+            {
+               
+                _logger.LogInformation("Forwarding GET /ideas to FastAPI");
+                var response = await _httpClient.GetFromJsonAsync<List<Idea>>("ideas");
+                return StatusCode(500, new { error = ex.Message });
+            }
+          
+        }
+
         [HttpGet("{id}")]
-        public async Task<ActionResult<IdeaDetail>> GetIdea(string id)
+        public async Task<ActionResult<Idea>> GetIdea(string id)
         {
             try
             {
                 _logger.LogInformation("Forwarding GET /ideas/{id} to FastAPI", id);
-                var response = await _httpClient.GetFromJsonAsync<IdeaDetail>($"ideas/{id}");
+                var response = await _httpClient.GetFromJsonAsync<Idea>($"ideas/{id}");
                 
                 if (response == null)
                 {
@@ -95,24 +91,6 @@ namespace IdeaGraph.Controllers
             }
         }
 
-        [HttpPost]
-        [Route("/api/idea")]
-        public async Task<ActionResult<IdeaDetail>> CreateIdea([FromBody] IdeaCreateRequest request)
-        {
-            try
-            {
-                _logger.LogInformation("Forwarding POST /idea to FastAPI with title: {title}", request.Title);
-                var response = await _httpClient.PostAsJsonAsync("idea", request);
-                response.EnsureSuccessStatusCode();
-                
-                var createdIdea = await response.Content.ReadFromJsonAsync<IdeaDetail>();
-                return Ok(createdIdea);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error creating idea in FastAPI");
-                return StatusCode(500, new { error = "Failed to create idea", detail = ex.Message });
-            }
-        }
+       
     }
 }

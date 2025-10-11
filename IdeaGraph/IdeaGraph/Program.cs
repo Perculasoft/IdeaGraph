@@ -1,5 +1,4 @@
 using IdeaGraph.Components;
-using IdeaGraph.Services;
 using IdeaGraph.Client.Services;
 
 namespace IdeaGraph
@@ -17,10 +16,7 @@ namespace IdeaGraph
 
             // Add API controller support
             builder.Services.AddControllers();
-
-            // Configure HttpClient for server's IdeaService to call FastAPI
-            var ideaGraphApiUrl = builder.Configuration["IdeaGraphApi:BaseUrl"] ?? "http://localhost:8000/";
-            builder.Services.AddHttpClient<IdeaGraph.Services.IdeaService>(client =>
+                     
             // Add API Controllers
             builder.Services.AddControllers();
 
