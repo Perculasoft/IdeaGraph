@@ -3,7 +3,11 @@ html, body {
 }
 
 a, .btn-link {
-    color: #006bb7;
+    color: var(--bs-link-color);
+}
+
+a:hover, .btn-link:hover {
+    color: var(--bs-link-hover-color);
 }
 
 .btn-primary {
