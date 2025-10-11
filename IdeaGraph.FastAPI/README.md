@@ -59,6 +59,12 @@ To verify that your `.env` file is being loaded correctly:
 python test_dotenv_loading.py
 ```
 
+To validate your ChromaDB Cloud configuration:
+
+```bash
+python validate_chromadb_config.py
+```
+
 ## API Endpoints
 
 - `GET /health` - Health check
