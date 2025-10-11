@@ -1,5 +1,4 @@
 using IdeaGraph.Components;
-using IdeaGraph.Services;
 using IdeaGraph.Client.Services;
 
 namespace IdeaGraph
@@ -15,12 +14,6 @@ namespace IdeaGraph
                 .AddInteractiveServerComponents()
                 .AddInteractiveWebAssemblyComponents();
 
-            // Add API controller support
-            builder.Services.AddControllers();
-
-            // Configure HttpClient for server's IdeaService to call FastAPI
-            var ideaGraphApiUrl = builder.Configuration["IdeaGraphApi:BaseUrl"] ?? "http://localhost:8000/";
-            builder.Services.AddHttpClient<IdeaGraph.Services.IdeaService>(client =>
             // Add API Controllers
             builder.Services.AddControllers();
 
@@ -30,13 +23,6 @@ namespace IdeaGraph
             {
                 client.BaseAddress = new Uri(fastApiUrl);
                 client.Timeout = TimeSpan.FromSeconds(30);
-            });
-
-            // Configure HttpClient for IdeaService (now points to local API)
-            var ideaGraphApiUrl = builder.Configuration["IdeaGraphApi:BaseUrl"] ?? "https://localhost:5001/api/";
-            builder.Services.AddHttpClient<IdeaService>(client =>
-            {
-                client.BaseAddress = new Uri(ideaGraphApiUrl);
             });
 
             // Configure HttpClient for client's IdeaService to call server API
