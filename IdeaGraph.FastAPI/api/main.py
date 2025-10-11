@@ -5,7 +5,6 @@ from datetime import datetime
 import os, uuid, httpx, math
 
 import chromadb
-from chromadb.config import Settings
 
 from dotenv import load_dotenv
 
