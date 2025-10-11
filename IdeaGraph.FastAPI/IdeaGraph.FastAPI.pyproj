@@ -43,7 +43,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="api\" />
-    <Folder Include="api\data\" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="api\main.py">
