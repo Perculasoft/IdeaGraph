@@ -35,7 +35,11 @@ if ALLOW_ORIGINS:
     )
 
 # --- Chroma Client/Collections ---
-client = chromadb.PersistentClient(path=CHROMA_DIR)
+client = chromadb.CloudClient(
+    tenant=CHROMA_TENANT,
+    database=CHROMA_DATABASE,
+    api_key=CHROMA_API_KEY
+)
 ideas = client.get_or_create_collection(name="ideas")        # ids, documents, embeddings, metadatas
 relations = client.get_or_create_collection(name="relations")# store edges as docs w/ metadata
 
