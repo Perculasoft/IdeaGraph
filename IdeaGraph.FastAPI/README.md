@@ -45,11 +45,27 @@ ALLOW_ORIGINS=http://localhost:3000,http://localhost:5173
 
 ### 3. Run the Application
 
+#### Option 1: Using uvicorn directly (recommended for development)
+
 ```bash
 uvicorn api.main:app --reload
 ```
 
+#### Option 2: Running the main.py file directly (works with Visual Studio)
+
+```bash
+python api/main.py
+```
+
 The API will be available at `http://localhost:8000`
+
+#### Visual Studio Users
+
+To start the server in Visual Studio:
+1. Make sure you have created a `.env` file based on `.env.example` with your API keys
+2. Press F5 or click the "Start" button in Visual Studio
+3. The console window will show startup messages and any errors
+4. If you see errors about missing API keys, check your `.env` file
 
 ## Testing Environment Configuration
 
