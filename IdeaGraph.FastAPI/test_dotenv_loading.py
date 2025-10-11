@@ -25,7 +25,7 @@ def test_dotenv_loading():
     print()
     
     # Clear environment variables to test loading
-    test_vars = ['OPENAI_API_KEY', 'OPENAI_ORG_ID', 'EMBEDDING_MODEL', 'CHROMA_DIR', 'ALLOW_ORIGINS']
+    test_vars = ['OPENAI_API_KEY', 'OPENAI_ORG_ID', 'EMBEDDING_MODEL', 'CHROMA_API_KEY', 'CHROMA_TENANT', 'CHROMA_DATABASE', 'ALLOW_ORIGINS']
     for var in test_vars:
         if var in os.environ:
             print(f"  Note: {var} was already set in environment")
@@ -49,7 +49,9 @@ def test_dotenv_loading():
     OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
     OPENAI_ORG_ID  = os.getenv("OPENAI_ORG_ID", "")
     EMBED_MODEL    = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-    CHROMA_DIR     = os.getenv("CHROMA_DIR", "./data")
+    CHROMA_API_KEY = os.getenv("CHROMA_API_KEY", "")
+    CHROMA_TENANT  = os.getenv("CHROMA_TENANT", "")
+    CHROMA_DATABASE = os.getenv("CHROMA_DATABASE", "IdeaGraph")
     ALLOW_ORIGINS  = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "").split(",") if o.strip()]
     
     print()
@@ -57,12 +59,18 @@ def test_dotenv_loading():
     print(f"  OPENAI_API_KEY: {'***' + OPENAI_API_KEY[-4:] if len(OPENAI_API_KEY) > 4 else 'NOT SET'}")
     print(f"  OPENAI_ORG_ID: {OPENAI_ORG_ID if OPENAI_ORG_ID else 'NOT SET'}")
     print(f"  EMBEDDING_MODEL: {EMBED_MODEL}")
-    print(f"  CHROMA_DIR: {CHROMA_DIR}")
+    print(f"  CHROMA_API_KEY: {'***' + CHROMA_API_KEY[-4:] if len(CHROMA_API_KEY) > 4 else 'NOT SET'}")
+    print(f"  CHROMA_TENANT: {CHROMA_TENANT if CHROMA_TENANT else 'NOT SET'}")
+    print(f"  CHROMA_DATABASE: {CHROMA_DATABASE}")
     print(f"  ALLOW_ORIGINS: {ALLOW_ORIGINS}")
     print()
     
     if not OPENAI_API_KEY:
         print("✗ OPENAI_API_KEY is not set in .env file")
+        return False
+    
+    if not CHROMA_API_KEY:
+        print("✗ CHROMA_API_KEY is not set in .env file")
         return False
     
     print("✓ SUCCESS: .env file is being loaded correctly!")
