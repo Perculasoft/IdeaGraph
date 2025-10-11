@@ -113,7 +113,21 @@
                                     <div class="fw-bold">@idea.Title</div>
                                     @if (!string.IsNullOrEmpty(idea.Description))
                                     {
-                                        <p class="mb-1 text-muted">@idea.Description</p>
+                                        <button class="btn btn-link btn-sm p-0 text-decoration-none" 
+                                                @onclick="() => ToggleDescription(idea.Id)">
+                                            @if (expandedDescriptions.Contains(idea.Id))
+                                            {
+                                                <span>▼ Hide description</span>
+                                            }
+                                            else
+                                            {
+                                                <span>▶ Show description</span>
+                                            }
+                                        </button>
+                                        @if (expandedDescriptions.Contains(idea.Id))
+                                        {
+                                            <p class="mb-1 text-muted mt-2">@idea.Description</p>
+                                        }
                                     }
                                     @if (idea.Tags.Any())
                                     {
@@ -271,6 +285,9 @@
     private Idea? deletingIdea = null;
     private bool isDeleting = false;
     private string deleteErrorMessage = string.Empty;
+
+    // Description visibility state
+    private HashSet<string> expandedDescriptions = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -525,6 +542,19 @@
         {
             isDeleting = false;
             StateHasChanged();
+        }
+    }
+
+    // Description toggle method
+    private void ToggleDescription(string ideaId)
+    {
+        if (expandedDescriptions.Contains(ideaId))
+        {
+            expandedDescriptions.Remove(ideaId);
+        }
+        else
+        {
+            expandedDescriptions.Add(ideaId);
         }
     }
 }
