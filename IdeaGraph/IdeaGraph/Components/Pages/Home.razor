@@ -1,0 +1,259 @@
+﻿@page "/"
+@using IdeaGraph.Models
+@using IdeaGraph.Services
+@inject IdeaService IdeaService
+@rendermode InteractiveServer
+
+<PageTitle>Home - IdeaGraph</PageTitle>
+
+<div class="container-fluid mt-4">
+    <h1 class="mb-4">IdeaGraph</h1>
+
+    <!-- Form to create new idea -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h3>Create New Idea</h3>
+        </div>
+        <div class="card-body">
+            <EditForm Model="@newIdea" OnValidSubmit="@HandleCreateIdea">
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title</label>
+                    <InputText id="title" class="form-control" @bind-Value="newIdea.Title" placeholder="Enter idea title" />
+                </div>
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    <InputTextArea id="description" class="form-control" @bind-Value="newIdea.Description" rows="3" placeholder="Enter idea description" />
+                </div>
+                <div class="mb-3">
+                    <label for="tags" class="form-label">Tags</label>
+                    <div class="tags-input-container">
+                        <div class="tags-chips">
+                            @foreach (var tag in newIdea.Tags)
+                            {
+                                <span class="tag-chip">
+                                    @tag
+                                    <button type="button" class="tag-remove" @onclick="() => RemoveTag(tag)">×</button>
+                                </span>
+                            }
+                        </div>
+                        <input type="text" 
+                               class="form-control mt-2" 
+                               @bind="currentTag" 
+                               @onkeydown="HandleTagInput"
+                               placeholder="Type tag and press Enter or comma" />
+                    </div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@isCreating">
+                        @if (isCreating)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Creating...</span>
+                        }
+                        else
+                        {
+                            <span>Create Idea</span>
+                        }
+                    </button>
+                    <button type="button" class="btn btn-secondary" @onclick="ResetForm">Clear</button>
+                </div>
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger mt-3" role="alert">
+                        @errorMessage
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success mt-3" role="alert">
+                        @successMessage
+                    </div>
+                }
+            </EditForm>
+        </div>
+    </div>
+
+    <!-- List of ideas -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>All Ideas</h3>
+            <button class="btn btn-sm btn-outline-primary" @onclick="LoadIdeas" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                }
+                else
+                {
+                    <span>🔄 Refresh</span>
+                }
+            </button>
+        </div>
+        <div class="card-body">
+            @if (isLoading && ideas.Count == 0)
+            {
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading ideas...</p>
+                </div>
+            }
+            else if (ideas.Count == 0)
+            {
+                <p class="text-muted text-center py-4">No ideas yet. Create your first idea above!</p>
+            }
+            else
+            {
+                <ul class="list-group list-group-flush">
+                    @foreach (var idea in ideas)
+                    {
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div class="ms-2 me-auto">
+                                <div class="fw-bold">@idea.Title</div>
+                                @if (idea.Tags.Any())
+                                {
+                                    <div class="mt-1">
+                                        @foreach (var tag in idea.Tags)
+                                        {
+                                            <span class="badge bg-secondary me-1">@tag</span>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                            <span class="badge bg-primary rounded-pill" title="Created: @idea.CreatedAt">@GetRelativeTime(idea.CreatedAt)</span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Idea> ideas = new();
+    private IdeaCreateRequest newIdea = new();
+    private string currentTag = string.Empty;
+    private bool isLoading = false;
+    private bool isCreating = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadIdeas();
+    }
+
+    private async Task LoadIdeas()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            ideas = await IdeaService.GetIdeasAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load ideas: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task HandleCreateIdea()
+    {
+        if (string.IsNullOrWhiteSpace(newIdea.Title))
+        {
+            errorMessage = "Title is required";
+            return;
+        }
+
+        isCreating = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var created = await IdeaService.CreateIdeaAsync(newIdea);
+            if (created != null)
+            {
+                successMessage = "Idea created successfully!";
+                ResetForm();
+                await LoadIdeas();
+            }
+            else
+            {
+                errorMessage = "Failed to create idea. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating idea: {ex.Message}";
+        }
+        finally
+        {
+            isCreating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleTagInput(KeyboardEventArgs e)
+    {
+        if ((e.Key == "Enter" || e.Key == ",") && !string.IsNullOrWhiteSpace(currentTag))
+        {
+            AddTag();
+        }
+    }
+
+    private void AddTag()
+    {
+        var trimmedTag = currentTag.Trim().TrimEnd(',');
+        if (!string.IsNullOrWhiteSpace(trimmedTag) && !newIdea.Tags.Contains(trimmedTag))
+        {
+            newIdea.Tags.Add(trimmedTag);
+            currentTag = string.Empty;
+        }
+    }
+
+    private void RemoveTag(string tag)
+    {
+        newIdea.Tags.Remove(tag);
+    }
+
+    private void ResetForm()
+    {
+        newIdea = new IdeaCreateRequest();
+        currentTag = string.Empty;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+    }
+
+    private string GetRelativeTime(string createdAt)
+    {
+        if (string.IsNullOrEmpty(createdAt))
+            return "Unknown";
+
+        if (DateTime.TryParse(createdAt, out var date))
+        {
+            var timeSpan = DateTime.UtcNow - date;
+            if (timeSpan.TotalMinutes < 1)
+                return "Just now";
+            if (timeSpan.TotalMinutes < 60)
+                return $"{(int)timeSpan.TotalMinutes}m ago";
+            if (timeSpan.TotalHours < 24)
+                return $"{(int)timeSpan.TotalHours}h ago";
+            if (timeSpan.TotalDays < 30)
+                return $"{(int)timeSpan.TotalDays}d ago";
+            return date.ToString("MMM dd, yyyy");
+        }
+
+        return "Unknown";
+    }
+}
+
