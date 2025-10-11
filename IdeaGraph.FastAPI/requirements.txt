@@ -4,3 +4,4 @@ pydantic
 chromadb
 openai
 httpx
+python-dotenv
