@@ -1,0 +1,35 @@
+name: Bugreport
+description: Neuer Bugreport mit Projektbezug
+title: "[Bugreport]: "
+labels: ["Bugreport"]
+assignees: []
+
+body:
+  - type: dropdown
+    id: main_project
+    attributes:
+      label: Hauptprojekt
+      options:
+        - IdeaGraph
+        - IdeaGraph.Client
+        - IdeaGraph.FastAPI
+
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: affected_projects
+    attributes:
+      label: Weitere betroffene Projekte
+      options:
+        - label: IdeaGraph
+        - label: IdeaGraph.Client
+        - label: IdeaGraph.FastAPI
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Kontext / Ziel
+      placeholder: Kurz & knackig…
+    validations:
+      required: true
