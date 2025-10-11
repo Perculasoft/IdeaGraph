@@ -3,9 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
 import os, uuid, httpx, math
-
 import chromadb
-
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
