@@ -21,6 +21,8 @@ CHROMA_DATABASE = os.getenv("CHROMA_DATABASE", "IdeaGraph")
 ALLOW_ORIGINS  = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "").split(",") if o.strip()]
 
 if not OPENAI_API_KEY:
+    print("ERROR: OPENAI_API_KEY is required but not found in environment variables.")
+    print("Please create a .env file based on .env.example and set your OPENAI_API_KEY.")
     raise RuntimeError("OPENAI_API_KEY is required")
 
 # --- App + CORS ---
@@ -35,13 +37,18 @@ if ALLOW_ORIGINS:
     )
 
 # --- Chroma Client/Collections ---
-client = chromadb.CloudClient(
-    tenant=CHROMA_TENANT,
-    database=CHROMA_DATABASE,
-    api_key=CHROMA_API_KEY
-)
-ideas = client.get_or_create_collection(name="ideas")        # ids, documents, embeddings, metadatas
-relations = client.get_or_create_collection(name="relations")# store edges as docs w/ metadata
+try:
+    client = chromadb.CloudClient(
+        tenant=CHROMA_TENANT,
+        database=CHROMA_DATABASE,
+        api_key=CHROMA_API_KEY
+    )
+    ideas = client.get_or_create_collection(name="ideas")        # ids, documents, embeddings, metadatas
+    relations = client.get_or_create_collection(name="relations")# store edges as docs w/ metadata
+except Exception as e:
+    print(f"ERROR: Failed to connect to ChromaDB Cloud: {e}")
+    print("Please check your CHROMA_API_KEY, CHROMA_TENANT, and CHROMA_DATABASE settings in .env file.")
+    raise
 
 # --- Schemas ---
 class IdeaIn(BaseModel):
@@ -179,4 +186,12 @@ def list_relations(idea_id: str):
         }
         for i in range(len(rels["ids"]))
     ]
+
+# --- Main Entry Point ---
+if __name__ == "__main__":
+    import uvicorn
+    print("Starting IdeaGraph FastAPI server...")
+    print(f"Server will be available at: http://localhost:8000")
+    print(f"API documentation at: http://localhost:8000/docs")
+    uvicorn.run("api.main:app", host="0.0.0.0", port=8000, reload=True)
 
