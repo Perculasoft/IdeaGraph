@@ -30,8 +30,14 @@ OPENAI_ORG_ID=your-org-id-here-optional
 # Optional: Embedding model to use (default: text-embedding-3-small)
 EMBEDDING_MODEL=text-embedding-3-small
 
-# Optional: ChromaDB data directory (default: ./data)
-CHROMA_DIR=./data
+# Required: ChromaDB Cloud API key
+CHROMA_API_KEY=your-chroma-api-key-here
+
+# Optional: ChromaDB Cloud tenant (if not provided, will be inferred from API key)
+CHROMA_TENANT=your-tenant-name
+
+# Optional: ChromaDB Cloud database (default: IdeaGraph)
+CHROMA_DATABASE=IdeaGraph
 
 # Optional: CORS allowed origins (comma-separated)
 ALLOW_ORIGINS=http://localhost:3000,http://localhost:5173
@@ -66,6 +72,6 @@ python test_dotenv_loading.py
 ## Features
 
 - **Semantic Search**: Uses OpenAI embeddings for semantic similarity
-- **Vector Database**: ChromaDB for efficient vector storage and retrieval
+- **Vector Database**: ChromaDB Cloud for efficient vector storage and retrieval
 - **Relation Tracking**: Track relationships between ideas (depends_on, extends, contradicts, synergizes_with)
 - **CORS Support**: Configurable CORS for frontend integration
