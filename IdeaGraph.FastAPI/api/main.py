@@ -34,6 +34,7 @@ EMBED_MODEL    = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
 CHROMA_API_KEY = os.getenv("CHROMA_API_KEY", "")
 CHROMA_TENANT  = os.getenv("CHROMA_TENANT", "")
 CHROMA_DATABASE = os.getenv("CHROMA_DATABASE", "IdeaGraph")
+X-Api-Key = os.getenv("X-Api-Key", "")
 ALLOW_ORIGINS  = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "").split(",") if o.strip()]
 
 if not OPENAI_API_KEY:
