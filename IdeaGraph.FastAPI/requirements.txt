@@ -5,3 +5,4 @@ chromadb
 openai
 httpx
 python-dotenv
+Depends
