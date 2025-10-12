@@ -109,7 +109,8 @@
                     <div class="mb-3">
                         <label for="description" class="form-label">Description</label>
                         <Editor Id="description" 
-                                @bind-Value="editRequest.Description" 
+                                @bind-Value="editRequest.Description"
+                                Field="@(() => editRequest.Description)"
                                 ApiKey="no-api-key"
                                 Conf="@editorConf" />
                     </div>
