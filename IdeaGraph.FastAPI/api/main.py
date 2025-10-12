@@ -380,6 +380,132 @@ def delete_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
         raise HTTPException(status_code=500, detail=f"Failed to delete idea: {str(e)}")
 
 
+@app.post("/ideas/{idea_id}/enhance")
+async def enhance_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
+    """
+    Enhance idea description and generate tags using OpenAI.
+    Improves spelling, grammar, formulation and generates 5 relevant tags.
+    """
+    logger.info(f"Enhancing idea with ID: {idea_id}")
+    
+    try:
+        # Get current idea
+        res = ideas.get(ids=[idea_id], include=["metadatas", "documents"])
+        if not res["ids"]:
+            logger.warning(f"Idea not found for enhancement: {idea_id}")
+            raise HTTPException(404, "Idea not found")
+        
+        current_meta = res["metadatas"][0] or {}
+        current_doc = res["documents"][0] if res["documents"] else ""
+        current_description = parse_description_from_document(current_doc)
+        current_title = current_meta.get("title", "")
+        
+        if not current_description.strip():
+            logger.warning(f"Idea {idea_id} has no description to enhance")
+            raise HTTPException(400, "Idea has no description to enhance")
+        
+        # Call OpenAI to improve description and generate tags
+        logger.debug(f"Calling OpenAI API to enhance description (length: {len(current_description)})")
+        headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
+        if OPENAI_ORG_ID:
+            headers["OpenAI-Organization"] = OPENAI_ORG_ID
+        
+        # Create prompt for OpenAI
+        prompt = f"""You are an AI assistant helping to improve idea descriptions. 
+
+Given the following idea title and description, please:
+1. Improve the description by fixing spelling, grammar, and formulation errors
+2. Make the description clearer and more professional while keeping the original meaning
+3. Generate exactly 5 relevant tags that describe the core topics of this idea
+
+Title: {current_title}
+
+Description:
+{current_description}
+
+Please respond ONLY with a JSON object in this exact format (no markdown, no code blocks):
+{{"improved_description": "your improved description here", "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]}}"""
+
+        try:
+            async with httpx.AsyncClient(timeout=60) as client_http:
+                r = await client_http.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers=headers,
+                    json={
+                        "model": "gpt-4o-mini",
+                        "messages": [
+                            {"role": "system", "content": "You are a helpful assistant that improves text and generates tags. Always respond with valid JSON only."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        "temperature": 0.7,
+                        "max_tokens": 2000
+                    }
+                )
+            r.raise_for_status()
+            response_data = r.json()
+            
+            # Extract the improved description and tags from OpenAI response
+            content = response_data["choices"][0]["message"]["content"].strip()
+            logger.debug(f"OpenAI response: {content[:200]}...")
+            
+            # Parse JSON response (remove markdown code blocks if present)
+            import json
+            if content.startswith("```"):
+                # Remove markdown code blocks
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+                content = content.strip()
+            
+            result = json.loads(content)
+            improved_description = result["improved_description"]
+            new_tags = result["tags"][:5]  # Ensure max 5 tags
+            
+            logger.info(f"Successfully enhanced description and generated {len(new_tags)} tags")
+            
+            # Update the idea with improved description and new tags
+            updated_title = current_title
+            updated_status = current_meta.get("status", "New")
+            
+            # Create new document for embedding
+            doc = f"{updated_title}\n\n{improved_description}\n\nTags: {', '.join(new_tags)}"
+            vec = await embed_text(doc)
+            
+            # Update metadata
+            new_meta = {
+                "title": updated_title,
+                "tags": ",".join(new_tags),
+                "created_at": current_meta.get("created_at", datetime.utcnow().isoformat()),
+                "status": updated_status
+            }
+            
+            # Update in ChromaDB
+            ideas.update(ids=[idea_id], documents=[doc], embeddings=[vec], metadatas=[new_meta])
+            logger.info(f"Successfully updated idea {idea_id} with enhanced content")
+            
+            return {
+                "id": idea_id,
+                "title": updated_title,
+                "description": improved_description,
+                "tags": new_tags,
+                "created_at": new_meta["created_at"],
+                "status": updated_status
+            }
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from OpenAI API: {e.response.status_code} - {e.response.text}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"OpenAI API error: {e.response.text}")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse OpenAI response as JSON: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to parse AI response")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to enhance idea {idea_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to enhance idea: {str(e)}")
+
+
 @app.get("/similar/{idea_id}")
 def similar(idea_id: str, k: int = 5, api_key: str = Depends(verify_api_key)):
     logger.debug(f"Finding similar ideas for: {idea_id} (k={k})")
