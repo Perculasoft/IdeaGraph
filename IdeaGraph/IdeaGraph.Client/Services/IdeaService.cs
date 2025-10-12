@@ -27,6 +27,20 @@ namespace IdeaGraph.Client.Services
             }
         }
 
+        public async Task<Idea?> GetIdeaAsync(string id)
+        {
+            try
+            {
+                var idea = await _httpClient.GetFromJsonAsync<Idea>($"api/ideas/{id}");
+                return idea;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(ex.ToString());
+                return null;
+            }
+        }
+
         public async Task<Idea?> CreateIdeaAsync(IdeaCreateRequest request)
         {
             try
