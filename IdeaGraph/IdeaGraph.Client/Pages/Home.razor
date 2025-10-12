@@ -43,6 +43,17 @@
                                placeholder="Type tag and press Enter or comma" />
                     </div>
                 </div>
+                <div class="mb-3">
+                    <label for="status" class="form-label">Status</label>
+                    <InputSelect id="status" class="form-select" @bind-Value="newIdea.Status">
+                        <option value="New">New</option>
+                        <option value="Concept">Concept</option>
+                        <option value="Specification">Specification</option>
+                        <option value="Ready">Ready</option>
+                        <option value="Implemented">Implemented</option>
+                        <option value="Discarded">Discarded</option>
+                    </InputSelect>
+                </div>
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary" disabled="@isCreating">
                         @if (isCreating)
@@ -138,6 +149,12 @@
                                             }
                                         </div>
                                     }
+                                    @if (!string.IsNullOrEmpty(idea.Status))
+                                    {
+                                        <div class="mt-1">
+                                            <span class="badge @GetStatusBadgeClass(idea.Status)">@idea.Status</span>
+                                        </div>
+                                    }
                                 </div>
                                 <div class="d-flex align-items-start gap-2">
                                     <span class="badge bg-primary rounded-pill" title="Created: @idea.CreatedAt">@GetRelativeTime(idea.CreatedAt)</span>
@@ -198,6 +215,17 @@
                                        @onkeydown="HandleEditTagInput"
                                        placeholder="Type tag and press Enter or comma" />
                             </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editStatus" class="form-label">Status</label>
+                            <InputSelect id="editStatus" class="form-select" @bind-Value="editRequest.Status">
+                                <option value="New">New</option>
+                                <option value="Concept">Concept</option>
+                                <option value="Specification">Specification</option>
+                                <option value="Ready">Ready</option>
+                                <option value="Implemented">Implemented</option>
+                                <option value="Discarded">Discarded</option>
+                            </InputSelect>
                         </div>
                         @if (!string.IsNullOrEmpty(editErrorMessage))
                         {
@@ -415,7 +443,8 @@
         {
             Title = idea.Title,
             Description = idea.Description,
-            Tags = new List<string>(idea.Tags)
+            Tags = new List<string>(idea.Tags),
+            Status = idea.Status
         };
         editCurrentTag = string.Empty;
         editErrorMessage = string.Empty;
@@ -556,6 +585,21 @@
         {
             expandedDescriptions.Add(ideaId);
         }
+    }
+
+    // Status badge color helper
+    private string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "New" => "bg-info",
+            "Concept" => "bg-primary",
+            "Specification" => "bg-warning text-dark",
+            "Ready" => "bg-success",
+            "Implemented" => "bg-dark",
+            "Discarded" => "bg-secondary",
+            _ => "bg-light text-dark"
+        };
     }
 }
 
