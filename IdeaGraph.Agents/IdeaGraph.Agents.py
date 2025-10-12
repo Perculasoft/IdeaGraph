@@ -279,26 +279,25 @@ If there is no meaningful relationship, use relation_type "none" and confidence 
     def check_existing_relation(self, source_id: str, target_id: str) -> bool:
         """Check if a relation already exists between two ideas."""
         try:
-            # Check in both directions
-            result = self.relations_collection.get(
+            # Check both directions separately since ChromaDB may not support complex $or queries
+            # Check forward direction
+            result_forward = self.relations_collection.get(
                 where={
-                    "$or": [
-                        {
-                            "$and": [
-                                {"source_id": source_id},
-                                {"target_id": target_id}
-                            ]
-                        },
-                        {
-                            "$and": [
-                                {"source_id": target_id},
-                                {"target_id": source_id}
-                            ]
-                        }
-                    ]
+                    "source_id": source_id,
+                    "target_id": target_id
                 }
             )
-            return len(result["ids"]) > 0
+            if len(result_forward["ids"]) > 0:
+                return True
+            
+            # Check reverse direction
+            result_reverse = self.relations_collection.get(
+                where={
+                    "source_id": target_id,
+                    "target_id": source_id
+                }
+            )
+            return len(result_reverse["ids"]) > 0
         except Exception as e:
             self.logger.debug(f"Error checking existing relation: {e}")
             # If we can't check, assume it doesn't exist

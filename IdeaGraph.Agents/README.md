@@ -24,7 +24,7 @@ The CoreAgent can identify the following types of relationships:
 - `contradicts` - Ideas that contradict or conflict with each other
 - `synergizes_with` - Ideas that work well together and amplify each other
 
-## Installation
+## Quick Start
 
 1. Navigate to the IdeaGraph.Agents directory:
 ```bash
@@ -46,6 +46,21 @@ cp .env.example .env
 OPENAI_API_KEY=your-openai-api-key
 CHROMA_API_KEY=your-chroma-api-key
 X_API_KEY=your-api-key-for-ideagraph-api
+```
+
+5. Test the configuration:
+```bash
+python test_agent.py
+```
+
+6. Run the agent once to test:
+```bash
+python __main__.py --once
+```
+
+7. Run the agent continuously:
+```bash
+python __main__.py
 ```
 
 ## Configuration
