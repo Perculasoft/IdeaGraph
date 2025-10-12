@@ -383,8 +383,9 @@ def delete_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
 @app.post("/ideas/{idea_id}/enhance")
 async def enhance_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
     """
-    Enhance idea description and generate tags using OpenAI.
-    Improves spelling, grammar, formulation and generates 5 relevant tags.
+    Du bist ein präziser deutscher Lektor.
+    Verbessere Rechtschreibung, Grammatik, Stil und Struktur.
+    Behalte Sinn & Fakten bei; erweitere nur behutsam um offensichtlich sinnvolle Klarstellungen (keine Spekulation, keine neuen externen Fakten). Schreibe auf Deutsch, sachlich, klar, ohne Marketing-Floskeln.
     """
     logger.info(f"Enhancing idea with ID: {idea_id}")
     
@@ -411,12 +412,13 @@ async def enhance_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
             headers["OpenAI-Organization"] = OPENAI_ORG_ID
         
         # Create prompt for OpenAI
-        prompt = f"""You are an AI assistant helping to improve idea descriptions. 
+        prompt = f""" Du bist ein präziser deutscher Lektor.
 
 Given the following idea title and description, please:
-1. Improve the description by fixing spelling, grammar, and formulation errors
-2. Make the description clearer and more professional while keeping the original meaning
-3. Generate exactly 5 relevant tags that describe the core topics of this idea
+1. Verbessere Rechtschreibung, Grammatik, Stil und Struktur.
+2. Gestalten Sie die Beschreibung klarer und professioneller, ohne die ursprüngliche Bedeutung zu verlieren.
+3. Behalte Sinn & Fakten bei; erweitere nur behutsam um offensichtlich sinnvolle Klarstellungen (keine Spekulation, keine neuen externen Fakten). Schreibe auf Deutsch, sachlich, klar, ohne Marketing-Floskeln.
+4. Generiere genau 5 relevante Tags, die die Kernthemen dieser Idee beschreiben
 
 Title: {current_title}
 
