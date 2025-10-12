@@ -13,7 +13,7 @@ body:
         - IdeaGraph
         - IdeaGraph.Client
         - IdeaGraph.FastAPI
-		- IdeaGraph.Agents
+        - IdeaGraph.Agents
 
     validations:
       required: true
