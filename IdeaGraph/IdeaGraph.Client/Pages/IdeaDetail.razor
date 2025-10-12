@@ -1,0 +1,320 @@
+@page "/Idea/{Id}"
+@using IdeaGraph.Client.Models
+@using IdeaGraph.Client.Services
+@inject IdeaService IdeaService
+@inject NavigationManager Navigation
+@rendermode InteractiveAuto
+
+<PageTitle>@(idea?.Title ?? "Idea Details") - IdeaGraph</PageTitle>
+
+<div class="container-fluid mt-4">
+    @if (isLoading)
+    {
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading idea...</p>
+        </div>
+    }
+    else if (idea == null)
+    {
+        <div class="alert alert-danger" role="alert">
+            <h4 class="alert-heading">Idea not found</h4>
+            <p>The requested idea could not be found.</p>
+            <hr>
+            <button class="btn btn-primary" @onclick="NavigateToHome">Go to Home</button>
+        </div>
+    }
+    else if (!isEditing)
+    {
+        <!-- View Mode -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>@idea.Title</h1>
+            <div class="d-flex gap-2">
+                <button class="btn btn-secondary" @onclick="NavigateToHome">
+                    ← Back to List
+                </button>
+                <button class="btn btn-primary" @onclick="StartEdit">
+                    ✏️ Edit
+                </button>
+            </div>
+        </div>
+
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Description</h5>
+                @if (!string.IsNullOrEmpty(idea.Description))
+                {
+                    <div class="description-content">
+                        @((MarkupString)idea.Description)
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted">No description provided.</p>
+                }
+            </div>
+        </div>
+
+        @if (idea.Tags.Any())
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Tags</h5>
+                    <div>
+                        @foreach (var tag in idea.Tags)
+                        {
+                            <span class="badge bg-secondary me-1">@tag</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Metadata</h5>
+                <p class="mb-0"><strong>Created:</strong> @idea.CreatedAt</p>
+                <p class="mb-0"><strong>ID:</strong> @idea.Id</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- Edit Mode -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Edit Idea</h1>
+            <div class="d-flex gap-2">
+                <button class="btn btn-secondary" @onclick="CancelEdit">
+                    Cancel
+                </button>
+            </div>
+        </div>
+
+        <EditForm Model="@editRequest" OnValidSubmit="@HandleUpdate">
+            <div class="card mb-3">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Title</label>
+                        <InputText id="title" class="form-control" @bind-Value="editRequest.Title" placeholder="Enter idea title" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <Editor Id="description" 
+                                @bind-Value="editRequest.Description" 
+                                ApiKey="no-api-key"
+                                Conf="@editorConf" />
+                    </div>
+                    <div class="mb-3">
+                        <label for="tags" class="form-label">Tags</label>
+                        <div class="tags-input-container">
+                            <div class="tags-chips">
+                                @if (editRequest.Tags != null)
+                                {
+                                    @foreach (var tag in editRequest.Tags)
+                                    {
+                                        <span class="tag-chip">
+                                            @tag
+                                            <button type="button" class="tag-remove" @onclick="() => RemoveTag(tag)">×</button>
+                                        </span>
+                                    }
+                                }
+                            </div>
+                            <input type="text" 
+                                   class="form-control mt-2" 
+                                   @bind="currentTag" 
+                                   @onkeydown="HandleTagInput"
+                                   placeholder="Type tag and press Enter or comma" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary" disabled="@isUpdating">
+                    @if (isUpdating)
+                    {
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        <span>Updating...</span>
+                    }
+                    else
+                    {
+                        <span>Save Changes</span>
+                    }
+                </button>
+                <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3" role="alert">
+                    @errorMessage
+                </div>
+            }
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert alert-success mt-3" role="alert">
+                    @successMessage
+                </div>
+            }
+        </EditForm>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public string Id { get; set; } = string.Empty;
+
+    private Idea? idea;
+    private bool isLoading = true;
+    private bool isEditing = false;
+    private bool isUpdating = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    private IdeaUpdateRequest editRequest = new();
+    private string currentTag = string.Empty;
+
+    private Dictionary<string, object> editorConf = new Dictionary<string, object>
+    {
+        { "height", 500 },
+        { "menubar", false },
+        { "plugins", "advlist autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table code help wordcount" },
+        { "toolbar", "undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help" }
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadIdea();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadIdea();
+    }
+
+    private async Task LoadIdea()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            idea = await IdeaService.GetIdeaAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load idea: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartEdit()
+    {
+        if (idea == null) return;
+
+        editRequest = new IdeaUpdateRequest
+        {
+            Title = idea.Title,
+            Description = idea.Description,
+            Tags = new List<string>(idea.Tags)
+        };
+        isEditing = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        editRequest = new();
+        currentTag = string.Empty;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+    }
+
+    private async Task HandleUpdate()
+    {
+        if (string.IsNullOrWhiteSpace(editRequest.Title))
+        {
+            errorMessage = "Title is required";
+            return;
+        }
+
+        isUpdating = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var updated = await IdeaService.UpdateIdeaAsync(Id, editRequest);
+            if (updated != null)
+            {
+                successMessage = "Idea updated successfully!";
+                idea = updated;
+                isEditing = false;
+                await Task.Delay(1000); // Show success message briefly
+                successMessage = string.Empty;
+            }
+            else
+            {
+                errorMessage = "Failed to update idea. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating idea: {ex.Message}";
+        }
+        finally
+        {
+            isUpdating = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleTagInput(KeyboardEventArgs e)
+    {
+        if ((e.Key == "Enter" || e.Key == ",") && !string.IsNullOrWhiteSpace(currentTag))
+        {
+            AddTag();
+        }
+    }
+
+    private void AddTag()
+    {
+        var trimmedTag = currentTag.Trim().TrimEnd(',');
+        if (!string.IsNullOrWhiteSpace(trimmedTag))
+        {
+            if (editRequest.Tags == null)
+            {
+                editRequest.Tags = new List<string>();
+            }
+            
+            if (!editRequest.Tags.Contains(trimmedTag))
+            {
+                editRequest.Tags.Add(trimmedTag);
+                currentTag = string.Empty;
+            }
+        }
+    }
+
+    private void RemoveTag(string tag)
+    {
+        if (editRequest.Tags != null)
+        {
+            editRequest.Tags.Remove(tag);
+        }
+    }
+
+    private void NavigateToHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

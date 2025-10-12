@@ -45,6 +45,8 @@ Configure the FastAPI backend URL in `appsettings.json`:
 | `/api/ideas` | `/ideas` | GET | List all ideas |
 | `/api/ideas/{id}` | `/ideas/{id}` | GET | Get a specific idea with relations |
 | `/api/idea` | `/idea` | POST | Create a new idea |
+| `/api/ideas/{id}` | `/ideas/{id}` | PUT | Update an existing idea |
+| `/api/ideas/{id}` | `/ideas/{id}` | DELETE | Delete an idea |
 
 **List Ideas Response:**
 ```json
@@ -85,6 +87,24 @@ Configure the FastAPI backend URL in `appsettings.json`:
   "title": "New Idea",
   "description": "Detailed description",
   "tags": ["innovation", "tech"]
+}
+```
+
+**Update Idea Request:**
+```json
+{
+  "title": "Updated Title",
+  "description": "Updated description",
+  "tags": ["updated", "tags"]
+}
+```
+Note: All fields are optional in update requests. Only provided fields will be updated.
+
+**Delete Idea Response:**
+```json
+{
+  "message": "Idea deleted successfully",
+  "id": "uuid"
 }
 ```
 
@@ -153,7 +173,7 @@ Configure the FastAPI backend URL in `appsettings.json`:
 
 ### IdeasController
 - **Route**: `/api/ideas`
-- **Purpose**: Manage ideas (list, get, create)
+- **Purpose**: Manage ideas (list, get, create, update, delete)
 - **Logging**: Logs all idea operations
 - **Error Handling**: Returns 404 for not found, 500 for server errors
 
