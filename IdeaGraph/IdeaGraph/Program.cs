@@ -14,6 +14,17 @@ namespace IdeaGraph
                 .AddInteractiveServerComponents()
                 .AddInteractiveWebAssemblyComponents();
 
+            // Add CORS policy for Blazor WebAssembly
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll", policy =>
+                {
+                    policy.AllowAnyOrigin()
+                          .AllowAnyMethod()
+                          .AllowAnyHeader();
+                });
+            });
+
             // Add API controller support
             builder.Services.AddControllers();
                      
@@ -66,6 +77,9 @@ namespace IdeaGraph
             }
 
             app.UseHttpsRedirection();
+
+            // Enable CORS
+            app.UseCors("AllowAll");
 
             app.UseAntiforgery();
 
