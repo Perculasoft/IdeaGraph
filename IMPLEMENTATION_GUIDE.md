@@ -90,7 +90,7 @@ Key features:
 <!-- Edit Mode - TinyMCE Editor -->
 <Editor Id="description" 
         @bind-Value="editRequest.Description" 
-        ApiKey="no-api-key"
+        ApiKey="gpl"
         Conf="@editorConf" />
 ```
 
@@ -141,7 +141,7 @@ The implementation uses the existing backend endpoint:
 - `PUT /api/ideas/{id}` - Update idea
 
 ### TinyMCE API Key
-Currently using `"no-api-key"` which is suitable for development. For production deployment, consider:
+Currently using `"gpl"` which allows TinyMCE to operate under the GPL license. The configuration also includes `license_key: "gpl"` in the editor configuration. This is appropriate for GPL-licensed projects. For non-GPL projects, consider:
 1. Getting a free API key from TinyMCE Cloud
 2. Self-hosting TinyMCE
 
