@@ -26,7 +26,7 @@ body:
         - label: IdeaGraph
         - label: IdeaGraph.Client
         - label: IdeaGraph.FastAPI
-		- label: IdeaGraph.Agents
+        - label: IdeaGraph.Agents
 
   - type: textarea
     id: context
