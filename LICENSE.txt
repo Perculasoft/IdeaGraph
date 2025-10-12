@@ -1,14 +1,10 @@
-Lizenz & Urheberrecht
-Dieses Whitepaper, das Konzept und die Systemidee **CoreMe / IdeaGraph** sowie alle zugehörigen textlichen, konzeptionellen und grafischen Inhalte stehen unter der Lizenz **Creative Commons Attribution – NonCommercial – ShareAlike 4.0 International (CC BY-NC-SA 4.0)**.
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 
-Das bedeutet:
-- Du darfst diese Inhalte **lesen, teilen, weiterentwickeln und verändern**, solange du den ursprünglichen **Urheber namentlich nennst**:
-  **© Christian Angermeier, Landshut / Germany – Konzept und Vision IdeaGraph & CoreMe**
-- Eine **kommerzielle Nutzung** ist **nicht erlaubt**, es sei denn, **ich, Christian Angermeier, stimme dieser ausdrücklich zu.**
-- Abgeleitete Werke müssen wieder unter der gleichen Lizenz veröffentlicht werden.
+Copyright (c) Christian Angermeier, Landshut / Germany – Konzept und Vision IdeaGraph & CoreMe
 
-Für Quellcode und Softwaremodule gilt zusätzlich:
-- **Code:** MIT oder Apache 2.0 (frei nutzbar, mit Urheberhinweis)
-- **Konzept & Vision:** CC BY-NC-SA 4.0 (Namensnennung erforderlich)
+Dieses Werk ist lizenziert unter einer Creative Commons 
+Namensnennung – Nicht kommerziell – Weitergabe unter gleichen Bedingungen 4.0 International Lizenz.
+Um eine Kopie dieser Lizenz zu sehen, besuche:
+https://creativecommons.org/licenses/by-nc-sa/4.0/
 
-> CoreMe / IdeaGraph ist Open Source im Geiste – aber bleibt in seiner Idee urheberrechtlich geschützt.
+Eine kommerzielle Nutzung ist nicht erlaubt, es sei denn, ich, Christian Angermeier, stimme dieser ausdrücklich zu.
