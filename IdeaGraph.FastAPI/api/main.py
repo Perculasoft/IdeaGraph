@@ -144,6 +144,29 @@ class RelationIn(BaseModel):
     relation_type: str  # depends_on / extends / contradicts / synergizes_with
     weight: float = 1.0
 
+# --- Helper Functions ---
+def parse_description_from_document(document: str) -> str:
+    """
+    Parse description from document format: {title}\n\n{description}\n\nTags: {tags}
+    Returns empty string if parsing fails.
+    """
+    try:
+        # Split by double newline to separate title, description, and tags
+        parts = document.split("\n\n")
+        if len(parts) >= 2:
+            # The description is everything between title and tags section
+            # Join all parts except first (title) and last (tags) if tags section exists
+            if len(parts) >= 3 and parts[-1].startswith("Tags: "):
+                description = "\n\n".join(parts[1:-1])
+            else:
+                # No tags section or malformed, take everything after title
+                description = "\n\n".join(parts[1:])
+            return description
+        return ""
+    except Exception as e:
+        logger.warning(f"Failed to parse description from document: {e}")
+        return ""
+
 # --- OpenAI Embedding ---
 async def embed_text(text: str):
     logger.debug(f"Generating embedding for text (length: {len(text)} chars)")
@@ -195,14 +218,13 @@ async def create_idea(idea: IdeaIn, api_key: str = Depends(verify_api_key)):
         vec = await embed_text(doc)
         meta = {
             "title": idea.title,
-            "description": idea.description,
             "tags": ",".join(idea.tags),  # Convert list to comma-separated string for ChromaDB
             "created_at": datetime.utcnow().isoformat(),
             "status": idea.status
         }
         ideas.add(ids=[_id], documents=[doc], embeddings=[vec], metadatas=[meta])
         logger.info(f"Successfully created idea with ID: {_id}")
-        return {"id": _id, "title": meta["title"], "description": meta["description"], "tags": idea.tags, "created_at": meta["created_at"], "status": meta["status"], "relations": [], "impact_score": 0.0}
+        return {"id": _id, "title": meta["title"], "description": idea.description, "tags": idea.tags, "created_at": meta["created_at"], "status": meta["status"], "relations": [], "impact_score": 0.0}
     except Exception as e:
         logger.error(f"Failed to create idea '{idea.title}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to create idea: {str(e)}")
@@ -211,16 +233,18 @@ async def create_idea(idea: IdeaIn, api_key: str = Depends(verify_api_key)):
 def list_ideas(api_key: str = Depends(verify_api_key)):
     logger.debug("Listing all ideas")
     try:
-        res = ideas.get()
+        res = ideas.get(include=["metadatas", "documents"])
         out = []
         for i, _id in enumerate(res["ids"]):
             meta = res["metadatas"][i] or {}
+            doc = res["documents"][i] if res["documents"] else ""
             tags_str = meta.get("tags", "")
             tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
+            description = parse_description_from_document(doc)
             out.append({
                 "id": _id,
                 "title": meta.get("title",""),
-                "description": meta.get("description",""),
+                "description": description,
                 "tags": tags_list,
                 "created_at": meta.get("created_at", ""),
                 "status": meta.get("status", "New")
@@ -237,11 +261,13 @@ def list_ideas(api_key: str = Depends(verify_api_key)):
 def get_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
     logger.debug(f"Fetching idea with ID: {idea_id}")
     try:
-        res = ideas.get(ids=[idea_id])
+        res = ideas.get(ids=[idea_id], include=["metadatas", "documents"])
         if not res["ids"]:
             logger.warning(f"Idea not found: {idea_id}")
             raise HTTPException(404, "Idea not found")
         meta = res["metadatas"][0] or {}
+        doc = res["documents"][0] if res["documents"] else ""
+        description = parse_description_from_document(doc)
         # fetch relations where source_id = idea_id
         rels = relations.get(where={"source_id": idea_id})
         edges = []
@@ -260,7 +286,7 @@ def get_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
         return {
             "id": idea_id,
             "title": meta.get("title",""),
-            "description": meta.get("description",""),
+            "description": description,
             "tags": tags_list,
             "created_at": meta.get("created_at",""),
             "status": meta.get("status", "New"),
@@ -278,18 +304,20 @@ async def update_idea(idea_id: str, idea_update: IdeaUpdateIn, api_key: str = De
     logger.debug(f"Update details - title: {idea_update.title}, description length: {len(idea_update.description or '')}, tags: {idea_update.tags}")
     
     try:
-        # First check if idea exists
-        res = ideas.get(ids=[idea_id])
+        # First check if idea exists and get current document
+        res = ideas.get(ids=[idea_id], include=["metadatas", "documents"])
         if not res["ids"]:
             logger.warning(f"Idea not found for update: {idea_id}")
             raise HTTPException(404, "Idea not found")
         
-        # Get current metadata
+        # Get current metadata and document
         current_meta = res["metadatas"][0] or {}
+        current_doc = res["documents"][0] if res["documents"] else ""
+        current_description = parse_description_from_document(current_doc)
         
         # Update only provided fields
         updated_title = idea_update.title if idea_update.title is not None else current_meta.get("title", "")
-        updated_description = idea_update.description if idea_update.description is not None else current_meta.get("description", "")
+        updated_description = idea_update.description if idea_update.description is not None else current_description
         updated_tags = idea_update.tags if idea_update.tags is not None else [t.strip() for t in current_meta.get("tags", "").split(",") if t.strip()]
         updated_status = idea_update.status if idea_update.status is not None else current_meta.get("status", "New")
         
@@ -297,10 +325,9 @@ async def update_idea(idea_id: str, idea_update: IdeaUpdateIn, api_key: str = De
         doc = f"{updated_title}\n\n{updated_description}\n\nTags: {', '.join(updated_tags)}"
         vec = await embed_text(doc)
         
-        # Update metadata
+        # Update metadata (without description to avoid size limit)
         new_meta = {
             "title": updated_title,
-            "description": updated_description,
             "tags": ",".join(updated_tags),
             "created_at": current_meta.get("created_at", datetime.utcnow().isoformat()),
             "status": updated_status
@@ -313,7 +340,7 @@ async def update_idea(idea_id: str, idea_update: IdeaUpdateIn, api_key: str = De
         return {
             "id": idea_id,
             "title": new_meta["title"],
-            "description": new_meta["description"],
+            "description": updated_description,
             "tags": updated_tags,
             "created_at": new_meta["created_at"],
             "status": new_meta["status"]
