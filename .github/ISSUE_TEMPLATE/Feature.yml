@@ -13,6 +13,7 @@ body:
         - IdeaGraph
         - IdeaGraph.Client
         - IdeaGraph.FastAPI
+	- IdeaGraph.Agents
 
     validations:
       required: true
@@ -25,6 +26,7 @@ body:
         - label: IdeaGraph
         - label: IdeaGraph.Client
         - label: IdeaGraph.FastAPI
+	- IdeaGraph.Agents
 
   - type: textarea
     id: context
