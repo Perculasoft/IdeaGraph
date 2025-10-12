@@ -130,11 +130,13 @@ class IdeaIn(BaseModel):
     title: str
     description: str = ""
     tags: list[str] = []
+    status: str = "New"
 
 class IdeaUpdateIn(BaseModel):
     title: str | None = None
     description: str | None = None
     tags: list[str] | None = None
+    status: str | None = None
 
 class RelationIn(BaseModel):
     source_id: str
@@ -195,11 +197,12 @@ async def create_idea(idea: IdeaIn, api_key: str = Depends(verify_api_key)):
             "title": idea.title,
             "description": idea.description,
             "tags": ",".join(idea.tags),  # Convert list to comma-separated string for ChromaDB
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.utcnow().isoformat(),
+            "status": idea.status
         }
         ideas.add(ids=[_id], documents=[doc], embeddings=[vec], metadatas=[meta])
         logger.info(f"Successfully created idea with ID: {_id}")
-        return {"id": _id, "title": meta["title"], "description": meta["description"], "tags": idea.tags, "created_at": meta["created_at"], "relations": [], "impact_score": 0.0}
+        return {"id": _id, "title": meta["title"], "description": meta["description"], "tags": idea.tags, "created_at": meta["created_at"], "status": meta["status"], "relations": [], "impact_score": 0.0}
     except Exception as e:
         logger.error(f"Failed to create idea '{idea.title}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to create idea: {str(e)}")
@@ -219,7 +222,8 @@ def list_ideas(api_key: str = Depends(verify_api_key)):
                 "title": meta.get("title",""),
                 "description": meta.get("description",""),
                 "tags": tags_list,
-                "created_at": meta.get("created_at", "")
+                "created_at": meta.get("created_at", ""),
+                "status": meta.get("status", "New")
             })
         # optional: sort by created_at desc (string ISO OK)
         out.sort(key=lambda x: x.get("created_at",""), reverse=True)
@@ -259,6 +263,7 @@ def get_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
             "description": meta.get("description",""),
             "tags": tags_list,
             "created_at": meta.get("created_at",""),
+            "status": meta.get("status", "New"),
             "relations": edges
         }
     except HTTPException:
@@ -286,6 +291,7 @@ async def update_idea(idea_id: str, idea_update: IdeaUpdateIn, api_key: str = De
         updated_title = idea_update.title if idea_update.title is not None else current_meta.get("title", "")
         updated_description = idea_update.description if idea_update.description is not None else current_meta.get("description", "")
         updated_tags = idea_update.tags if idea_update.tags is not None else [t.strip() for t in current_meta.get("tags", "").split(",") if t.strip()]
+        updated_status = idea_update.status if idea_update.status is not None else current_meta.get("status", "New")
         
         # Create new document for embedding
         doc = f"{updated_title}\n\n{updated_description}\n\nTags: {', '.join(updated_tags)}"
@@ -296,7 +302,8 @@ async def update_idea(idea_id: str, idea_update: IdeaUpdateIn, api_key: str = De
             "title": updated_title,
             "description": updated_description,
             "tags": ",".join(updated_tags),
-            "created_at": current_meta.get("created_at", datetime.utcnow().isoformat())
+            "created_at": current_meta.get("created_at", datetime.utcnow().isoformat()),
+            "status": updated_status
         }
         
         # Update in ChromaDB
@@ -308,7 +315,8 @@ async def update_idea(idea_id: str, idea_update: IdeaUpdateIn, api_key: str = De
             "title": new_meta["title"],
             "description": new_meta["description"],
             "tags": updated_tags,
-            "created_at": new_meta["created_at"]
+            "created_at": new_meta["created_at"],
+            "status": new_meta["status"]
         }
     except HTTPException:
         raise
@@ -369,6 +377,7 @@ def similar(idea_id: str, k: int = 5, api_key: str = Depends(verify_api_key)):
                 "description": meta.get("description",""),
                 "tags": tags_list,
                 "created_at": meta.get("created_at",""),
+                "status": meta.get("status", "New"),
                 "distance": float(res["distances"][0][i]) if "distances" in res else None
             })
         logger.info(f"Found {len(out)} similar ideas for {idea_id}")
