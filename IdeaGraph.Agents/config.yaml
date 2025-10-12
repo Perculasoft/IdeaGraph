@@ -1,0 +1,33 @@
+# IdeaGraph.Agents - CoreAgent Configuration
+
+# Execution interval in seconds (how often to run the agent)
+execution_interval: 300  # 5 minutes
+
+# ChromaDB Configuration
+chromadb:
+  tenant: ""  # Will be loaded from CHROMA_TENANT env var if empty
+  database: "IdeaGraph"  # Will be loaded from CHROMA_DATABASE env var if empty
+  api_key: ""  # Will be loaded from CHROMA_API_KEY env var if empty
+
+# OpenAI Configuration
+openai:
+  api_key: ""  # Will be loaded from OPENAI_API_KEY env var if empty
+  org_id: ""  # Will be loaded from OPENAI_ORG_ID env var if empty
+  embedding_model: "text-embedding-3-large"  # Model for generating embeddings
+  chat_model: "gpt-4o-mini"  # Model for relation type determination
+
+# Similarity Search Configuration
+similarity_search:
+  n_results: 5  # Number of similar ideas to find per idea
+  confidence_threshold: 0.75  # Minimum confidence to create a relation (0.0 - 1.0)
+
+# API Configuration (for storing relations)
+api:
+  base_url: "http://localhost:8000"  # FastAPI base URL
+  api_key: ""  # Will be loaded from X_API_KEY env var if empty
+  use_direct_db: false  # If true, write directly to DB instead of using API
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
