@@ -1,5 +1,15 @@
 namespace IdeaGraph.Client.Models
 {
+    public enum IdeaStatus
+    {
+        New,
+        Concept,
+        Specification,
+        Ready,
+        Implemented,
+        Discarded
+    }
+
     public class Idea
     {
         public string Id { get; set; } = string.Empty;
@@ -7,6 +17,7 @@ namespace IdeaGraph.Client.Models
         public string Description { get; set; } = string.Empty;
         public List<string> Tags { get; set; } = new();
         public string CreatedAt { get; set; } = string.Empty;
+        public string Status { get; set; } = "New";
     }
 
     public class IdeaCreateRequest
@@ -14,6 +25,7 @@ namespace IdeaGraph.Client.Models
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public List<string> Tags { get; set; } = new();
+        public string Status { get; set; } = "New";
     }
 
     public class IdeaUpdateRequest
@@ -21,5 +33,6 @@ namespace IdeaGraph.Client.Models
         public string? Title { get; set; }
         public string? Description { get; set; }
         public List<string>? Tags { get; set; }
+        public string? Status { get; set; }
     }
 }
