@@ -57,7 +57,7 @@ namespace IdeaGraph
             {
                 var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                 var httpClient = httpClientFactory.CreateClient();
-                httpClient.BaseAddress = new Uri(builder.Configuration["BaseAddress"] ?? "http://localhost:5000/");
+                httpClient.BaseAddress = new Uri(builder.Configuration["BaseAddress"] ?? "https://localhost:7034/");
                 return new IdeaGraph.Client.Services.IdeaService(httpClient);
             });
             builder.Services.AddHttpClient();

@@ -12,15 +12,29 @@ The ASP.NET Core application now hosts API controllers that forward requests to 
 
 ## Configuration
 
-Configure the FastAPI backend URL in `appsettings.json`:
+Configure the application URLs and backend services in `appsettings.json`:
 
 ```json
 {
+  "BaseAddress": "https://yourdomain.com/",
   "FastAPI": {
     "BaseUrl": "http://localhost:8000/"
+  },
+  "IdeaGraphApi": {
+    "BaseUrl": "https://yourdomain.com/api/"
   }
 }
 ```
+
+### Configuration Parameters
+
+- **BaseAddress**: The base URL where the IdeaGraph application is hosted. This is used by server-side components to make API calls back to the application. Should match your deployment domain (e.g., `https://yourdomain.com/` in production, `https://localhost:7034/` in development).
+
+- **FastAPI.BaseUrl**: The internal URL of the FastAPI backend service. Typically `http://localhost:8000/` as FastAPI should not be exposed externally.
+
+- **IdeaGraphApi.BaseUrl**: The URL for the application's own API endpoints. In development, this can be `https://localhost:5001/api/`, in production it should point to your domain's API path.
+
+**Important**: When deploying to production, ensure `BaseAddress` is set to your actual domain URL, not `localhost`.
 
 ## Endpoint Mapping
 
