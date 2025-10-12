@@ -8,81 +8,11 @@
 <PageTitle>Home - IdeaGraph</PageTitle>
 
 <div class="container-fluid mt-4">
-    <h1 class="mb-4">CoreMe v0.1</h1>
-
-    <!-- Form to create new idea -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h3>Create New Idea</h3>
-        </div>
-        <div class="card-body">
-            <EditForm Model="@newIdea" OnValidSubmit="@HandleCreateIdea">
-                <div class="mb-3">
-                    <label for="title" class="form-label">Title</label>
-                    <InputText id="title" class="form-control" @bind-Value="newIdea.Title" placeholder="Enter mind title" />
-                </div>
-                <div class="mb-3">
-                    <label for="description" class="form-label">Description</label>
-                    <InputTextArea id="description" class="form-control" @bind-Value="newIdea.Description" rows="3" placeholder="Enter mind description" />
-                </div>
-                <div class="mb-3">
-                    <label for="tags" class="form-label">Tags</label>
-                    <div class="tags-input-container">
-                        <div class="tags-chips">
-                            @foreach (var tag in newIdea.Tags)
-                            {
-                                <span class="tag-chip">
-                                    @tag
-                                    <button type="button" class="tag-remove" @onclick="() => RemoveTag(tag)">×</button>
-                                </span>
-                            }
-                        </div>
-                        <input type="text" 
-                               class="form-control mt-2" 
-                               @bind="currentTag" 
-                               @onkeydown="HandleTagInput"
-                               placeholder="Type tag and press Enter or comma" />
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label for="status" class="form-label">Status</label>
-                    <InputSelect id="status" class="form-select" @bind-Value="newIdea.Status">
-                        <option value="New">New</option>
-                        <option value="Concept">Concept</option>
-                        <option value="Specification">Specification</option>
-                        <option value="Ready">Ready</option>
-                        <option value="Implemented">Implemented</option>
-                        <option value="Discarded">Discarded</option>
-                    </InputSelect>
-                </div>
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-primary" disabled="@isCreating">
-                        @if (isCreating)
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            <span>Creating...</span>
-                        }
-                        else
-                        {
-                            <span>Create Idea</span>
-                        }
-                    </button>
-                    <button type="button" class="btn btn-secondary" @onclick="ResetForm">Clear</button>
-                </div>
-                @if (!string.IsNullOrEmpty(errorMessage))
-                {
-                    <div class="alert alert-danger mt-3" role="alert">
-                        @errorMessage
-                    </div>
-                }
-                @if (!string.IsNullOrEmpty(successMessage))
-                {
-                    <div class="alert alert-success mt-3" role="alert">
-                        @successMessage
-                    </div>
-                }
-            </EditForm>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>CoreMe v0.1</h1>
+        <button class="btn btn-primary" @onclick="NavigateToNewIdea">
+            ➕ Create New Idea
+        </button>
     </div>
 
     <!-- List of ideas -->
@@ -112,7 +42,7 @@
             }
             else if (ideas.Count == 0)
             {
-                <p class="text-muted text-center py-4">No ideas yet. Create your first idea above!</p>
+                <p class="text-muted text-center py-4">No ideas yet. Click the "Create New Idea" button above to get started!</p>
             }
             else
             {
@@ -216,11 +146,7 @@
 
 @code {
     private List<Idea> ideas = new();
-    private IdeaCreateRequest newIdea = new();
-    private string currentTag = string.Empty;
     private bool isLoading = false;
-    private bool isCreating = false;
-    private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
 
     // Delete state
@@ -239,7 +165,6 @@
     private async Task LoadIdeas()
     {
         isLoading = true;
-        errorMessage = string.Empty;
         successMessage = string.Empty;
         StateHasChanged();
 
@@ -247,9 +172,9 @@
         {
             ideas = await IdeaService.GetIdeasAsync();
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            errorMessage = $"Failed to load ideas: {ex.Message}";
+            // Silently fail - ideas will be empty list
         }
         finally
         {
@@ -258,73 +183,10 @@
         }
     }
 
-    private async Task HandleCreateIdea()
+    // Navigation methods
+    private void NavigateToNewIdea()
     {
-        if (string.IsNullOrWhiteSpace(newIdea.Title))
-        {
-            errorMessage = "Title is required";
-            return;
-        }
-
-        isCreating = true;
-        errorMessage = string.Empty;
-        successMessage = string.Empty;
-        StateHasChanged();
-
-        try
-        {
-            var created = await IdeaService.CreateIdeaAsync(newIdea);
-            if (created != null)
-            {
-                successMessage = "Idea created successfully!";
-                ResetForm();
-                await LoadIdeas();
-            }
-            else
-            {
-                errorMessage = "Failed to create idea. Please try again.";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Error creating idea: {ex.Message}";
-        }
-        finally
-        {
-            isCreating = false;
-            StateHasChanged();
-        }
-    }
-
-    private void HandleTagInput(KeyboardEventArgs e)
-    {
-        if ((e.Key == "Enter" || e.Key == ",") && !string.IsNullOrWhiteSpace(currentTag))
-        {
-            AddTag();
-        }
-    }
-
-    private void AddTag()
-    {
-        var trimmedTag = currentTag.Trim().TrimEnd(',');
-        if (!string.IsNullOrWhiteSpace(trimmedTag) && !newIdea.Tags.Contains(trimmedTag))
-        {
-            newIdea.Tags.Add(trimmedTag);
-            currentTag = string.Empty;
-        }
-    }
-
-    private void RemoveTag(string tag)
-    {
-        newIdea.Tags.Remove(tag);
-    }
-
-    private void ResetForm()
-    {
-        newIdea = new IdeaCreateRequest();
-        currentTag = string.Empty;
-        errorMessage = string.Empty;
-        successMessage = string.Empty;
+        Navigation.NavigateTo("/Idea/new");
     }
 
     private string GetRelativeTime(string createdAt)
@@ -349,7 +211,6 @@
         return "Unknown";
     }
 
-    // Navigation methods
     private void NavigateToDetail(string ideaId)
     {
         Navigation.NavigateTo($"/Idea/{ideaId}");

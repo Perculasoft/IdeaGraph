@@ -5,7 +5,7 @@
 @inject NavigationManager Navigation
 @rendermode InteractiveAuto
 
-<PageTitle>@(idea?.Title ?? "Idea Details") - IdeaGraph</PageTitle>
+<PageTitle>@(isCreating ? "New Idea" : idea?.Title ?? "Idea Details") - IdeaGraph</PageTitle>
 
 <div class="container-fluid mt-4">
     @if (isLoading)
@@ -91,7 +91,7 @@
     {
         <!-- Edit Mode -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>Edit Idea</h1>
+            <h1>@(isCreating ? "Create New Idea" : "Edit Idea")</h1>
             <div class="d-flex gap-2">
                 <button class="btn btn-secondary" @onclick="CancelEdit">
                     Cancel
@@ -155,11 +155,11 @@
                     @if (isUpdating)
                     {
                         <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        <span>Updating...</span>
+                        <span>@(isCreating ? "Creating..." : "Updating...")</span>
                     }
                     else
                     {
-                        <span>Save Changes</span>
+                        <span>@(isCreating ? "Create Idea" : "Save Changes")</span>
                     }
                 </button>
                 <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
@@ -188,6 +188,7 @@
     private Idea? idea;
     private bool isLoading = true;
     private bool isEditing = false;
+    private bool isCreating = false;
     private bool isUpdating = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
@@ -211,11 +212,37 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        // Reset state when navigating to a different idea or creating new
+        isEditing = false;
+        isCreating = false;
+        idea = null;
+        editRequest = new();
+        currentTag = string.Empty;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        
         await LoadIdea();
     }
 
     private async Task LoadIdea()
     {
+        // If Id is "new", we're creating a new idea
+        if (Id.Equals("new", StringComparison.OrdinalIgnoreCase))
+        {
+            isLoading = false;
+            isCreating = true;
+            isEditing = true;
+            editRequest = new IdeaUpdateRequest
+            {
+                Title = string.Empty,
+                Description = string.Empty,
+                Tags = new List<string>(),
+                Status = "New"
+            };
+            StateHasChanged();
+            return;
+        }
+
         isLoading = true;
         errorMessage = string.Empty;
         StateHasChanged();
@@ -275,23 +302,50 @@
 
         try
         {
-            var updated = await IdeaService.UpdateIdeaAsync(Id, editRequest);
-            if (updated != null)
+            if (isCreating)
             {
-                successMessage = "Idea updated successfully!";
-                idea = updated;
-                isEditing = false;
-                await Task.Delay(1000); // Show success message briefly
-                successMessage = string.Empty;
+                // Creating a new idea
+                var createRequest = new IdeaCreateRequest
+                {
+                    Title = editRequest.Title ?? string.Empty,
+                    Description = editRequest.Description ?? string.Empty,
+                    Tags = editRequest.Tags ?? new List<string>(),
+                    Status = editRequest.Status ?? "New"
+                };
+                
+                var created = await IdeaService.CreateIdeaAsync(createRequest);
+                if (created != null)
+                {
+                    successMessage = "Idea created successfully!";
+                    await Task.Delay(1000); // Show success message briefly
+                    Navigation.NavigateTo($"/Idea/{created.Id}");
+                }
+                else
+                {
+                    errorMessage = "Failed to create idea. Please try again.";
+                }
             }
             else
             {
-                errorMessage = "Failed to update idea. Please try again.";
+                // Updating existing idea
+                var updated = await IdeaService.UpdateIdeaAsync(Id, editRequest);
+                if (updated != null)
+                {
+                    successMessage = "Idea updated successfully!";
+                    idea = updated;
+                    isEditing = false;
+                    await Task.Delay(1000); // Show success message briefly
+                    successMessage = string.Empty;
+                }
+                else
+                {
+                    errorMessage = "Failed to update idea. Please try again.";
+                }
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error updating idea: {ex.Message}";
+            errorMessage = $"Error {(isCreating ? "creating" : "updating")} idea: {ex.Message}";
         }
         finally
         {
