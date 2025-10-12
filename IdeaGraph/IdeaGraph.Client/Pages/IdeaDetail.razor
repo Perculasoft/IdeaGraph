@@ -35,6 +35,9 @@
                 <button class="btn btn-secondary" @onclick="NavigateToHome">
                     ← Back to List
                 </button>
+                <button class="btn btn-info" @onclick="ConfirmEnhanceIdea" title="Enhance with AI">
+                    🤖 AI Enhance
+                </button>
                 <button class="btn btn-primary" @onclick="StartEdit">
                     ✏️ Edit
                 </button>
@@ -180,6 +183,49 @@
     }
 </div>
 
+<!-- AI Enhancement Confirmation Modal -->
+@if (showEnhanceModal)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🤖 AI Enhancement Confirmation</h5>
+                    <button type="button" class="btn-close" @onclick="CancelEnhance"></button>
+                </div>
+                <div class="modal-body">
+                    <p>The AI will:</p>
+                    <ul>
+                        <li>Improve the description (spelling, grammar, formulation)</li>
+                        <li><strong>Replace all existing tags</strong> with 5 AI-generated tags</li>
+                    </ul>
+                    <p class="text-warning"><strong>Warning:</strong> This action will overwrite your current description and tags. This cannot be undone.</p>
+                    @if (!string.IsNullOrEmpty(enhanceErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @enhanceErrorMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelEnhance">Cancel</button>
+                    <button type="button" class="btn btn-info" @onclick="HandleEnhanceIdea" disabled="@isEnhancing">
+                        @if (isEnhancing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Enhancing...</span>
+                        }
+                        else
+                        {
+                            <span>🤖 Enhance with AI</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter]
     public string Id { get; set; } = string.Empty;
@@ -191,6 +237,11 @@
     private bool isUpdating = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
+
+    // AI Enhancement state
+    private bool showEnhanceModal = false;
+    private bool isEnhancing = false;
+    private string enhanceErrorMessage = string.Empty;
 
     private IdeaUpdateRequest editRequest = new();
     private string currentTag = string.Empty;
@@ -405,5 +456,60 @@
             "Discarded" => "bg-secondary",
             _ => "bg-secondary"
         };
+    }
+
+    // AI Enhancement methods
+    private void ConfirmEnhanceIdea()
+    {
+        if (idea == null || string.IsNullOrWhiteSpace(idea.Description))
+        {
+            errorMessage = "Cannot enhance: Idea has no description.";
+            return;
+        }
+        
+        showEnhanceModal = true;
+        enhanceErrorMessage = string.Empty;
+    }
+
+    private void CancelEnhance()
+    {
+        showEnhanceModal = false;
+        enhanceErrorMessage = string.Empty;
+    }
+
+    private async Task HandleEnhanceIdea()
+    {
+        if (idea == null)
+            return;
+
+        isEnhancing = true;
+        enhanceErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var enhanced = await IdeaService.EnhanceIdeaAsync(Id);
+            if (enhanced != null)
+            {
+                successMessage = "Idea enhanced successfully with AI!";
+                idea = enhanced;
+                showEnhanceModal = false;
+                await Task.Delay(2000); // Show success message
+                successMessage = string.Empty;
+            }
+            else
+            {
+                enhanceErrorMessage = "Failed to enhance idea. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            enhanceErrorMessage = $"Error enhancing idea: {ex.Message}";
+        }
+        finally
+        {
+            isEnhancing = false;
+            StateHasChanged();
+        }
     }
 }

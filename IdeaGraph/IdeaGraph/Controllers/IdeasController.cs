@@ -147,5 +147,40 @@ namespace IdeaGraph.Controllers
                 return StatusCode(500, new { error = "Failed to delete idea", detail = ex.Message });
             }
         }
+
+        [HttpPost("{id}/enhance")]
+        public async Task<ActionResult<Idea>> EnhanceIdea(string id)
+        {
+            try
+            {
+                _logger.LogInformation("Forwarding POST /ideas/{id}/enhance to FastAPI", id);
+                var response = await _httpClient.PostAsync($"ideas/{id}/enhance", null);
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return NotFound(new { error = "Idea not found" });
+                }
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    return BadRequest(new { error = "Idea has no description to enhance", detail = errorContent });
+                }
+                
+                response.EnsureSuccessStatusCode();
+                var enhancedIdea = await response.Content.ReadFromJsonAsync<Idea>();
+                return Ok(enhancedIdea);
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("Idea {id} not found in FastAPI", id);
+                return NotFound(new { error = "Idea not found" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error enhancing idea {id} in FastAPI", id);
+                return StatusCode(500, new { error = "Failed to enhance idea", detail = ex.Message });
+            }
+        }
     }
 }

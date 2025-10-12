@@ -89,5 +89,21 @@ namespace IdeaGraph.Client.Services
                 return false;
             }
         }
+
+        public async Task<Idea?> EnhanceIdeaAsync(string id)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/ideas/{id}/enhance", null);
+                response.EnsureSuccessStatusCode();
+                return await response.Content.ReadFromJsonAsync<Idea>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+                Debug.WriteLine(ex.ToString());
+                return null;
+            }
+        }
     }
 }
