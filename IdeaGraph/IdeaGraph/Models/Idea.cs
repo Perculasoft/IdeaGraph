@@ -18,6 +18,9 @@ namespace IdeaGraph.Models
         
         [JsonPropertyName("created_at")]
         public string CreatedAt { get; set; } = string.Empty;
+        
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = "New";
     }
 
     public class IdeaCreateRequest
@@ -30,6 +33,9 @@ namespace IdeaGraph.Models
         
         [JsonPropertyName("tags")]
         public List<string> Tags { get; set; } = new();
+        
+        [JsonPropertyName("status")]
+        public string Status { get; set; } = "New";
     }
 
     public class IdeaUpdateRequest
@@ -42,6 +48,9 @@ namespace IdeaGraph.Models
         
         [JsonPropertyName("tags")]
         public List<string>? Tags { get; set; }
+        
+        [JsonPropertyName("status")]
+        public string? Status { get; set; }
     }
 
     public class IdeaDetail : Idea
