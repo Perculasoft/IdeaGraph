@@ -1,73 +1,102 @@
-# 🧠 IdeaGraph
-**Ein persönliches Denk- und Ideensystem, das Verbindungen erkennt, bevor man sie selbst sieht.**
+# CoreMe / IdeaGraph – Das Manifest der vernetzten Gedanken
+
+## 1. Ursprung & Motivation
+Menschen denken nicht linear – sie denken vernetzt. Klassische Software zwingt uns jedoch in Tabellen, Listen und Hierarchien. CoreMe / IdeaGraph will das auflösen: Es bildet Denken so ab, wie es tatsächlich geschieht – chaotisch, organisch, bedeutungsvoll.
+
+> CoreMe ist kein Tool, das Ordnung erzwingt. Es ist ein System, das Ordnung **ermöglicht.**
 
 ---
 
-## 🌍 Vision
+## 2. Philosophie – Gedanken statt Ideen
+Im Kern von CoreMe gibt es keine Aufgaben, Projekte oder Tickets – nur **Gedanken.**
 
-**IdeaGraph** ist kein klassischer Notiz- oder Task-Manager.  
-Es ist eine Plattform, die Gedanken, Konzepte und Ideen **semantisch versteht** und **vernetzt**, statt sie nur zu speichern.
+Ein Gedanke kann eine Idee, eine Aufgabe, ein Ziel, ein Rezept, ein Termin, ein Dokument oder ein Gefühl sein. Erst durch **Beziehungen** entsteht Bedeutung. 
 
-Ziel ist es, ein System zu schaffen, das den kreativen Denkprozess abbildet:
-- Ideen entstehen spontan – IdeaGraph hält sie fest.
-- Die KI erkennt Zusammenhänge zwischen Ideen.
-- Ähnliche oder synergistische Ideen werden automatisch verknüpft.
-- Aus losen Gedanken entstehen Strukturen, Projekte und Innovationen.
+> **Beziehungen sind die Sprache des Denkens.**
 
-> *„Ich möchte nicht mehr wissen, was ich schon gedacht habe –  
-> sondern sehen, wie meine Gedanken miteinander sprechen.“*
+### Vom Chaos zur Klarheit
+Chaos ist kein Fehler, sondern Rohmaterial für Struktur. CoreMe nimmt das Chaos auf, spiegelt es und macht Zusammenhänge sichtbar. Beziehungen zwischen Gedanken formen automatisch Prozesse und Abläufe, ohne dass Regeln oder Hierarchien vorgegeben werden.
 
----
+### Das fraktale Denken
+Jede Idee enthält Unterideen. Beim Hineinzoomen werden Details sichtbar; beim Herauszoomen erkennt man das Big Picture. CoreMe ist wie ein fraktales Bild: Auf jeder Ebene ergibt sich Sinn – nur in anderer Auflösung.
 
-## 💡 Kernidee
+### Das neuronale Prinzip
+CoreMe funktioniert wie ein Gehirn:
+- **Gedanken = Neuronen**  
+- **Beziehungen = Synapsen**  
+- **Aktivierungen = Nutzung & Bedeutung**
 
-Jede Idee ist ein **Knoten** in einem semantischen Netzwerk.  
-Die KI erstellt Vektoren (Embeddings) aus Titel, Beschreibung und Tags.  
-So erkennt das System, **welche Ideen sich ähneln**, **aufeinander aufbauen** oder **kombinierbar** sind.
+Wenn Gedanken verknüpft werden, entsteht Bedeutung. Häufig genutzte Verbindungen werden stärker – das System lernt, welche Denkpfade relevant sind.
 
-Das Ziel ist eine **visuelle, durchsuchbare Karte** deines Denkraums –  
-eine Art digitales Gedächtnis mit semantischem Bewusstsein.
+> CoreMe ist kein Werkzeug zur Organisation, sondern ein neuronaler Spiegel des Menschen.
 
 ---
 
-## 🧩 Architekturüberblick
+## 3. Vision – Das universelle kognitive System
+Ein System, das sich dem Menschen und dem Kontext gleichermaßen anpasst. Es kann ein Backlog, ein Projektmanager, ein Kochbuch, ein Lernsystem oder eine Ideensammlung sein – je nachdem, wie seine Gedanken verknüpft sind.
 
-| Ebene | Technologie | Aufgabe |
-|-------|--------------|----------|
-| **Frontend (UI)** | Blazor WebAssembly (PWA) | Eingabe, Übersicht, Visualisierung |
-| **Backend (API)** | FastAPI (Python 3.11) | REST-Schnittstelle für Ideen, Ähnlichkeit & Relationen |
-| **Vektorspeicher** | ChromaDB | Speicherung der semantischen Embeddings |
-| **KI-Service** | OpenAI API (`text-embedding-3-small`) | Embedding-Berechnung |
-| **Datenformat** | JSON / REST | Kommunikation zwischen UI und API |
+> **Ein Gedanke. Unendlich viele Bedeutungen.**
 
----
+CoreMe ist die eierlegende Wollmilchsau der digitalen Kognition – ein Wolpertinger aus Wissen, Ideen, Kontext und Intelligenz. 
 
-## ⚙️ Funktionsumfang (MVP)
-
-1. 📝 **Ideen erfassen**  
-   Titel, Beschreibung, Tags – ein Klick, und die Idee ist im System.  
-
-2. 🧠 **Semantische Analyse**  
-   Beim Speichern wird über die OpenAI-API ein Embedding erzeugt und in ChromaDB abgelegt.
-
-3. 🔍 **Ähnliche Ideen finden**  
-   Über die Vektorsuche schlägt IdeaGraph thematisch verwandte Ideen vor.
-
-4. 🕸️ **Netzwerk-Darstellung (später)**  
-   Ideen erscheinen als Knoten-Graph, Relationen als Verbindungen.
+### Vom Chaos zur Erkenntnis
+Auf den ersten Blick wirkt CoreMe wie ein dichter Cannabis-Bud: chaotisch, wild, unübersichtlich. Doch beim Hineinzoomen erkennt man die Struktur, die Verbindungen, die Ordnung. Erst durch Beziehungen entsteht Klarheit.
 
 ---
 
-## 🧰 Tech-Stack (aktuell)
+## 4. Technische Basis (v0.1)
 
-- **Frontend:** .NET 9 Blazor WebAssembly (PWA, installierbar, kein Offline-Cache)
-- **Backend:** Python 3.12 / FastAPI / Uvicorn
-- **Vektordatenbank:** ChromaDB (Cloud)
-- **Embeddings:** OpenAI `text-embedding-3-small`
-- **Kommunikation:** REST (JSON)
+### Aktueller Stand
+**ChromaDB** bildet das semantische Gedächtnis:  
+Gedanken werden als Embeddings gespeichert, ähnliche Inhalte erkannt, Beziehungen gebildet.
 
+**CustomGPT + Actions** bilden die kognitive Schicht:  
+Sie interpretieren, verknüpfen und erweitern Gedanken und führen Aktionen aus (z. B. Relation anlegen, Idee speichern, ähnliche Gedanken finden).
 
+> **Chroma ist das Gedächtnis – der CustomGPT ist das Bewusstsein.**
 
-# Frontend entwickeln / starten
-cd IdeaGraph.Wasm
-dotnet run
+### Geplante Komponenten
+| Schicht | Technologie | Status | Aufgabe |
+|----------|--------------|---------|----------|
+| KI-Schicht | CustomGPT + Actions | Aktiv | Denken, Interpretieren, Handeln |
+| Speicher | ChromaDB | Aktiv | Semantisches Gedächtnis |
+| Backend | FastAPI (Python) | Geplant | REST/GraphQL-API für Gedanken & Relationen |
+| Frontend | Blazor WebAssembly (PWA, .NET 9) | Geplant | Benutzeroberfläche, Visualisierung, Offline-Fähigkeit |
+| Integrationen | .NET 9 API Layer | Geplant | Anbindung an GitHub, Outlook, SharePoint etc. |
+| Agent Layer | Python / LangChain / Actions | Konzept | Automatisierung, Workflow & KI-Assistenz |
+
+### Leitprinzipien
+- **Minimaler Stack, maximale Semantik**
+- **API-First & Modularität**
+- **Kontextualisierung vor Automatisierung**
+- **Lokal & sicher** (Datenhoheit)
+- **KI als Middleware, nicht als Monolith**
+
+---
+
+## 5. Ausblick
+CoreMe / IdeaGraph ist aktuell ein semantisches Fundament. Mit der Zeit wird es zum **Cognitive OS** – einem digitalen Organismus, der:
+- Chaos in Struktur verwandelt,
+- Denken in Prozesse übersetzt,
+- Wissen lebendig und vernetzt macht,
+- und mit dem Menschen mitlernt.
+
+> **CoreMe denkt nicht für dich – es denkt mit dir.**
+
+---
+
+## 6. Lizenz & Urheberrecht
+Dieses Whitepaper, das Konzept und die Systemidee **CoreMe / IdeaGraph** sowie alle zugehörigen textlichen, konzeptionellen und grafischen Inhalte stehen unter der Lizenz **Creative Commons Attribution – NonCommercial – ShareAlike 4.0 International (CC BY-NC-SA 4.0)**.
+
+Das bedeutet:
+- Du darfst diese Inhalte **lesen, teilen, weiterentwickeln und verändern**, solange du den ursprünglichen **Urheber namentlich nennst**:
+  **© Christian Angermeier, Landshut / Germany – Konzept und Vision IdeaGraph & CoreMe**
+- Eine **kommerzielle Nutzung** ist **nicht erlaubt**, es sei denn, **ich, Christian Angermeier, stimme dieser ausdrücklich zu.**
+- Abgeleitete Werke müssen wieder unter der gleichen Lizenz veröffentlicht werden.
+
+Für Quellcode und Softwaremodule gilt zusätzlich:
+- **Code:** MIT oder Apache 2.0 (frei nutzbar, mit Urheberhinweis)
+- **Konzept & Vision:** CC BY-NC-SA 4.0 (Namensnennung erforderlich)
+
+> CoreMe / IdeaGraph ist Open Source im Geiste – aber bleibt in seiner Idee urheberrechtlich geschützt.
+
