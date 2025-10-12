@@ -72,6 +72,13 @@
             </div>
         }
 
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Status</h5>
+                <span class="badge @GetStatusBadgeClass(idea.Status)">@idea.Status</span>
+            </div>
+        </div>
+
         <div class="card">
             <div class="card-body">
                 <h5 class="card-title">Metadata</h5>
@@ -127,6 +134,17 @@
                                    @onkeydown="HandleTagInput"
                                    placeholder="Type tag and press Enter or comma" />
                         </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <InputSelect id="status" class="form-select" @bind-Value="editRequest.Status">
+                            <option value="New">New</option>
+                            <option value="Concept">Concept</option>
+                            <option value="Specification">Specification</option>
+                            <option value="Ready">Ready</option>
+                            <option value="Implemented">Implemented</option>
+                            <option value="Discarded">Discarded</option>
+                        </InputSelect>
                     </div>
                 </div>
             </div>
@@ -223,7 +241,8 @@
         {
             Title = idea.Title,
             Description = idea.Description,
-            Tags = new List<string>(idea.Tags)
+            Tags = new List<string>(idea.Tags),
+            Status = idea.Status
         };
         isEditing = true;
         errorMessage = string.Empty;
@@ -316,5 +335,20 @@
     private void NavigateToHome()
     {
         Navigation.NavigateTo("/");
+    }
+
+    // Status badge helper
+    private string GetStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "New" => "bg-info",
+            "Concept" => "bg-primary",
+            "Specification" => "bg-warning text-dark",
+            "Ready" => "bg-success",
+            "Implemented" => "bg-success",
+            "Discarded" => "bg-secondary",
+            _ => "bg-secondary"
+        };
     }
 }
