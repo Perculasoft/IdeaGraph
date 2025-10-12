@@ -53,11 +53,14 @@ namespace IdeaGraph
             });
 
             // Configure HttpClient for client's IdeaService to call server API
+            // For server-side Blazor, we need to call the API on the same server
+            // Use NavigationManager at runtime to get the correct base URL
             builder.Services.AddScoped<IdeaGraph.Client.Services.IdeaService>(sp =>
             {
                 var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
                 var httpClient = httpClientFactory.CreateClient();
-                httpClient.BaseAddress = new Uri(builder.Configuration["BaseAddress"] ?? "http://localhost:5000/");
+                var navManager = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+                httpClient.BaseAddress = new Uri(navManager.BaseUri);
                 return new IdeaGraph.Client.Services.IdeaService(httpClient);
             });
             builder.Services.AddHttpClient();
