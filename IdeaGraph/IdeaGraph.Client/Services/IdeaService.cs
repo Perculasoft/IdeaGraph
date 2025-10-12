@@ -22,6 +22,7 @@ namespace IdeaGraph.Client.Services
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
                 Debug.WriteLine(ex.ToString());
                 return new List<Idea>();
             }
@@ -36,6 +37,7 @@ namespace IdeaGraph.Client.Services
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
                 Debug.WriteLine(ex.ToString());
                 return null;
             }
@@ -49,8 +51,10 @@ namespace IdeaGraph.Client.Services
                 response.EnsureSuccessStatusCode();
                 return await response.Content.ReadFromJsonAsync<Idea>();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
+                Debug.WriteLine(ex.ToString());
                 return null;
             }
         }
@@ -63,8 +67,10 @@ namespace IdeaGraph.Client.Services
                 response.EnsureSuccessStatusCode();
                 return await response.Content.ReadFromJsonAsync<Idea>();
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
+                Debug.WriteLine(ex.ToString());
                 return null;
             }
         }
@@ -76,8 +82,10 @@ namespace IdeaGraph.Client.Services
                 var response = await _httpClient.DeleteAsync($"api/ideas/{id}");
                 return response.IsSuccessStatusCode;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
+                Debug.WriteLine(ex.ToString());
                 return false;
             }
         }
