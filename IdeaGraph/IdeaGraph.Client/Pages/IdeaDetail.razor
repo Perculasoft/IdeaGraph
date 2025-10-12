@@ -30,7 +30,7 @@
     {
         <!-- View Mode -->
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h1>@idea.Title</h1>
+            <h2>@idea.Title</h2>
             <div class="d-flex gap-2">
                 <button class="btn btn-secondary" @onclick="NavigateToHome">
                     ← Back to List
@@ -42,11 +42,10 @@
         </div>
 
         <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Description</h5>
+            <div class="card-body">            
                 @if (!string.IsNullOrEmpty(idea.Description))
                 {
-                    <div class="description-content">
+                    <div class="description-content text-white">
                         @((MarkupString)idea.Description)
                     </div>
                 }
