@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel
 from datetime import datetime
-import os, uuid, httpx, math
+import os, uuid, httpx, math, tempfile
 import chromadb
 from dotenv import load_dotenv
 import logging
@@ -113,7 +113,16 @@ try:
     # This prevents ChromaDB from trying to create local directories
     settings = chromadb.Settings()
     settings.is_persistent = False
-    settings.persist_directory = ""
+    # CloudClient shouldn't need local persistence, but some versions of the
+    # Chroma SDK still try to prepare the directory specified in
+    # ``persist_directory`` when creating new collections.  Using an empty
+    # string makes the SDK fall back to the user's home directory which isn't
+    # writable in our deployment environment (resulting in ``Permission
+    # denied: '/home/ideagraph'`` when adding the first relation).  Point the
+    # directory to a writable temporary location instead to avoid the
+    # permission error while keeping persistence disabled.
+    settings.persist_directory = os.path.join(tempfile.gettempdir(), "chromadb")
+    os.makedirs(settings.persist_directory, exist_ok=True)
     
     client = chromadb.CloudClient(
         tenant=CHROMA_TENANT,
