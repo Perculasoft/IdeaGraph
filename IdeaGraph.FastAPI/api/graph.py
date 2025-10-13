@@ -3,8 +3,9 @@ import os
 import httpx
 import logging
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import APIKeyHeader
 from datetime import datetime
-from api.config import CLIENT_ID, CLIENT_SECRET, TENANT_ID, OPENAI_API_KEY, OPENAI_ORG_ID
+from api.config import CLIENT_ID, CLIENT_SECRET, TENANT_ID, OPENAI_API_KEY, OPENAI_ORG_ID, X_API_KEY
 from api.model.mailrequest import MailRequest
 
 # Set up logging
@@ -17,10 +18,21 @@ load_dotenv()
 # Shared mailbox address for receiving ideas
 SHARED_MAILBOX = "idea@angermeier.net"
 
-# Import verify_api_key at runtime to avoid circular dependency
-def get_verify_api_key():
-    from api.main import verify_api_key
-    return verify_api_key
+# API Key Authentication (duplicated from main.py to avoid circular import)
+api_key_header = APIKeyHeader(name="X-Api-Key", auto_error=False)
+
+async def verify_api_key(api_key: str = Depends(api_key_header)):
+    if not X_API_KEY:
+        logger.warning("No X_API_KEY configured in environment - authentication is disabled!")
+        return api_key
+    
+    if api_key != X_API_KEY:
+        logger.warning(f"Invalid API key attempt from request")
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid or missing API key"
+        )
+    return api_key
 
 async def get_graph_token():
     """
@@ -52,7 +64,7 @@ async def get_graph_token():
 
 
 @router.post("/mail/send")
-async def send_mail(mail_request: MailRequest, api_key: str = Depends(get_verify_api_key())):
+async def send_mail(mail_request: MailRequest, api_key: str = Depends(verify_api_key)):
     """
     Send an email via Microsoft Graph API.
     
@@ -118,7 +130,7 @@ async def send_mail(mail_request: MailRequest, api_key: str = Depends(get_verify
 
 
 @router.get("/mail/receive")
-async def receive_mail(api_key: str = Depends(get_verify_api_key())):
+async def receive_mail(api_key: str = Depends(verify_api_key)):
     """
     Fetch emails from shared mailbox (idea@angermeier.net), create ideas in ChromaDB,
     enhance with AI-generated tags, and move processed emails to Archive folder.
