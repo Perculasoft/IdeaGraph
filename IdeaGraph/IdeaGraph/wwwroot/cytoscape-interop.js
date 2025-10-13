@@ -9,9 +9,16 @@ window.cytoscapeInterop = {
                 this.cyInstance = null;
             }
 
+            // Check if container exists
+            const container = document.getElementById(containerId);
+            if (!container) {
+                console.error('Container element not found:', containerId);
+                return false;
+            }
+
             // Initialize Cytoscape
             this.cyInstance = cytoscape({
-                container: document.getElementById(containerId),
+                container: container,
                 elements: elements,
                 style: [
                     {
@@ -98,8 +105,7 @@ window.cytoscapeInterop = {
                     initialTemp: 200,
                     coolingFactor: 0.95,
                     minTemp: 1.0
-                },
-                wheelSensitivity: 0.2
+                }
             });
 
             // Add click event to nodes
