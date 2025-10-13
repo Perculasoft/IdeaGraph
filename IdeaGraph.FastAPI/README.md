@@ -97,7 +97,7 @@ python validate_chromadb_config.py
 ## Features
 
 - **Semantic Search**: Uses OpenAI embeddings for semantic similarity
-- **Vector Database**: ChromaDB Cloud for efficient vector storage and retrieval
+- **Vector Database**: ChromaDB Cloud for efficient vector storage and retrieval (configured without local persistence to avoid permission issues in production)
 - **Relation Tracking**: Track relationships between ideas (depends_on, extends, contradicts, synergizes_with)
 - **CORS Support**: Configurable CORS for frontend integration
 - **Comprehensive Logging**: Structured logging with configurable log levels for error tracking and debugging
@@ -138,3 +138,24 @@ Example log output:
 - **Operations**: Successful operations like idea creation, retrieval (INFO level)
 - **Errors**: All errors with full stack traces (ERROR level)
 - **Debug Info**: Detailed operation information when LOG_LEVEL=DEBUG
+
+## Troubleshooting
+
+### Permission Denied Errors
+
+If you encounter errors like `[Errno 13] Permission denied: '/home/ideagraph'` when using ChromaDB Cloud:
+
+The application is configured to use ChromaDB Cloud without local persistence. This means:
+- No local directories are created
+- All data is stored in ChromaDB Cloud
+- The `persist_directory` setting is explicitly disabled
+
+This configuration prevents permission issues in restricted deployment environments while maintaining full functionality with ChromaDB Cloud.
+
+### ChromaDB Connection Issues
+
+If you have trouble connecting to ChromaDB Cloud:
+1. Verify your `CHROMA_API_KEY` is correct in the `.env` file
+2. Check that `CHROMA_TENANT` and `CHROMA_DATABASE` match your ChromaDB Cloud settings
+3. Enable DEBUG logging (`LOG_LEVEL=DEBUG`) to see detailed connection information
+4. Run the validation script: `python validate_chromadb_config.py`
