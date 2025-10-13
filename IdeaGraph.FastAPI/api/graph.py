@@ -5,8 +5,8 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import APIKeyHeader
 from datetime import datetime
-from api.config import CLIENT_ID, CLIENT_SECRET, TENANT_ID, OPENAI_API_KEY, OPENAI_ORG_ID, X_API_KEY
-from api.model.mailrequest import MailRequest
+from config import CLIENT_ID, CLIENT_SECRET, TENANT_ID, OPENAI_API_KEY, OPENAI_ORG_ID, X_API_KEY
+from model.mailrequest import MailRequest
 
 # Set up logging
 logger = logging.getLogger(__name__)
