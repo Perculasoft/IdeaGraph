@@ -109,7 +109,8 @@
             _isLoading = false;
             StateHasChanged();
 
-            // Initialize Cytoscape
+            // Wait for the DOM to update before initializing Cytoscape
+            await Task.Delay(100);
             await InitializeCytoscape();
         }
         catch (Exception ex)
