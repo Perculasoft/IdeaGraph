@@ -559,7 +559,7 @@ def add_relation(rel: RelationIn, api_key: str = Depends(verify_api_key)):
         # store each relation as its own doc in "relations"
         rid = f"{rel.source_id}->{rel.target_id}:{rel.relation_type}"
         meta = rel.dict()
-        relations.upsert(ids=[rid], documents=[f"{rel.relation_type}"], metadatas=[meta])
+        relations.add(ids=[rid], documents=[f"{rel.relation_type}"], metadatas=[meta])
         logger.info(f"Successfully added relation with ID: {rid}")
         return {"id": rid, **meta}
     except Exception as e:
