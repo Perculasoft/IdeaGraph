@@ -560,15 +560,17 @@ def similar(idea_id: str, k: int = 5, api_key: str = Depends(verify_api_key)):
         raise HTTPException(status_code=500, detail=f"Failed to find similar ideas: {str(e)}")
 
 @app.post("/relation")
-def add_relation(rel: RelationIn, api_key: str = Depends(verify_api_key)):
+async def add_relation(rel: RelationIn, api_key: str = Depends(verify_api_key)):
     logger.info(f"Adding relation: {rel.source_id} -> {rel.target_id} ({rel.relation_type})")
     logger.debug(f"Relation details - weight: {rel.weight}")
-    
+
     try:
         # store each relation as its own doc in "relations"
         rid = f"{rel.source_id}->{rel.target_id}:{rel.relation_type}"
         meta = rel.dict()
-        relations.add(ids=[rid], documents=[f"{rel.relation_type}"], metadatas=[meta])
+        doc = f"{rel.source_id} {rel.relation_type} {rel.target_id}"
+        vec = await embed_text(doc)
+        relations.add(ids=[rid], documents=[doc], embeddings=[vec], metadatas=[meta])
         logger.info(f"Successfully added relation with ID: {rid}")
         return {"id": rid, **meta}
     except Exception as e:
