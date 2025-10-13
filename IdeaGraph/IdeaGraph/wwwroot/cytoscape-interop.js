@@ -3,6 +3,11 @@ window.cytoscapeInterop = {
     
     initializeCytoscape: function(containerId, elements) {
         try {
+            // Register cose-bilkent layout if available
+            if (typeof cytoscape !== 'undefined' && typeof cytoscapeCoseBilkent !== 'undefined') {
+                cytoscape.use(cytoscapeCoseBilkent);
+            }
+
             // Destroy existing instance if any
             if (this.cyInstance) {
                 this.cyInstance.destroy();
@@ -24,16 +29,16 @@ window.cytoscapeInterop = {
                     {
                         selector: 'node',
                         style: {
-                            'background-color': '#3b82f6',
+                            'background-color': 'data(color)',
                             'label': 'data(label)',
-                            'text-valign': 'center',
+                            'text-valign': 'top',
                             'text-halign': 'center',
-                            'color': '#fff',
-                            'text-outline-color': '#3b82f6',
-                            'text-outline-width': 2,
-                            'font-size': '12px',
-                            'width': '50px',
-                            'height': '50px'
+                            'text-margin-y': -10,
+                            'color': '#333',
+                            'font-size': '10px',
+                            'font-weight': 'normal',
+                            'width': '40px',
+                            'height': '40px'
                         }
                     },
                     {
@@ -89,22 +94,20 @@ window.cytoscapeInterop = {
                     }
                 ],
                 layout: {
-                    name: 'cose',
+                    name: 'cose-bilkent',
+                    animate: false,
                     idealEdgeLength: 150,
-                    nodeOverlap: 20,
-                    refresh: 20,
-                    fit: true,
-                    padding: 30,
-                    randomize: false,
-                    componentSpacing: 100,
-                    nodeRepulsion: 400000,
-                    edgeElasticity: 100,
-                    nestingFactor: 5,
-                    gravity: 80,
-                    numIter: 1000,
-                    initialTemp: 200,
-                    coolingFactor: 0.95,
-                    minTemp: 1.0
+                    nodeRepulsion: 4500,
+                    edgeElasticity: 0.45,
+                    nestingFactor: 0.1,
+                    gravity: 0.25,
+                    numIter: 2500,
+                    tile: true,
+                    tilingPaddingVertical: 10,
+                    tilingPaddingHorizontal: 10,
+                    gravityRangeCompound: 1.5,
+                    gravityCompound: 1.0,
+                    gravityRange: 3.8
                 }
             });
 
