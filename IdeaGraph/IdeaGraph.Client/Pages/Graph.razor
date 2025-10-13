@@ -1,22 +1,192 @@
 @page "/graph"
 @rendermode InteractiveAuto
+@inject IdeaService IdeaService
+@inject RelationService RelationService
+@inject IJSRuntime JSRuntime
+@using IdeaGraph.Client.Models
+@using IdeaGraph.Client.Services
 
 <PageTitle>Graph - IdeaGraph</PageTitle>
 
 <div class="container-fluid mt-4">
     <div class="card">
-        <div class="card-header">
+        <div class="card-header d-flex justify-content-between align-items-center">
             <h3>Idea Graph</h3>
-        </div>
-        <div class="card-body">
-            <div class="text-center py-5">
-                <p class="text-muted">Graph visualization coming soon...</p>
-                <p class="text-muted mt-2">This page will display the relationships between ideas in an interactive graph format.</p>
+            <div>
+                <button class="btn btn-sm btn-outline-primary me-2" @onclick="FitToView" disabled="@(!_isLoaded)">
+                    <i class="bi bi-arrows-angle-expand"></i> Fit to View
+                </button>
+                <button class="btn btn-sm btn-outline-primary" @onclick="ResetZoom" disabled="@(!_isLoaded)">
+                    <i class="bi bi-arrow-clockwise"></i> Reset Zoom
+                </button>
             </div>
+        </div>
+        <div class="card-body p-0">
+            @if (_isLoading)
+            {
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="text-muted mt-2">Loading graph data...</p>
+                </div>
+            }
+            else if (_errorMessage != null)
+            {
+                <div class="alert alert-danger m-4" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill"></i> @_errorMessage
+                </div>
+            }
+            else if (!_isLoaded || _ideas.Count == 0)
+            {
+                <div class="text-center py-5">
+                    <p class="text-muted">No ideas found to display in the graph.</p>
+                    <p class="text-muted mt-2">Create some ideas first to see them visualized here.</p>
+                </div>
+            }
+            else
+            {
+                <div id="cy" style="width: 100%; height: 700px;"></div>
+                <div class="p-3 bg-light border-top">
+                    <small class="text-muted">
+                        <strong>Legend:</strong>
+                        <span class="ms-3"><span class="badge bg-danger">depends_on</span></span>
+                        <span class="ms-2"><span class="badge bg-success">extends</span></span>
+                        <span class="ms-2"><span class="badge bg-warning">contradicts</span></span>
+                        <span class="ms-2"><span class="badge bg-primary">synergizes_with</span></span>
+                        <span class="ms-4"><i class="bi bi-info-circle"></i> Click on a node to view idea details</span>
+                    </small>
+                </div>
+            }
         </div>
     </div>
 </div>
 
 @code {
-    // Graph page implementation will be added later
+    private List<Idea> _ideas = new();
+    private List<Relation> _allRelations = new();
+    private bool _isLoading = true;
+    private bool _isLoaded = false;
+    private string? _errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadGraphData();
+        }
+    }
+
+    private async Task LoadGraphData()
+    {
+        try
+        {
+            _isLoading = true;
+            _errorMessage = null;
+            StateHasChanged();
+
+            // Load all ideas
+            _ideas = await IdeaService.GetIdeasAsync();
+
+            if (_ideas.Count == 0)
+            {
+                _isLoading = false;
+                StateHasChanged();
+                return;
+            }
+
+            // Load all relations for all ideas
+            var relationTasks = _ideas.Select(idea => RelationService.GetRelationsAsync(idea.Id));
+            var relationsResults = await Task.WhenAll(relationTasks);
+
+            // Flatten and deduplicate relations
+            _allRelations = relationsResults
+                .SelectMany(r => r)
+                .GroupBy(r => r.Id)
+                .Select(g => g.First())
+                .ToList();
+
+            _isLoading = false;
+            StateHasChanged();
+
+            // Initialize Cytoscape
+            await InitializeCytoscape();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to load graph data: {ex.Message}";
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task InitializeCytoscape()
+    {
+        try
+        {
+            // Prepare nodes
+            var nodes = _ideas.Select(idea => new
+            {
+                data = new
+                {
+                    id = idea.Id,
+                    label = idea.Title
+                }
+            }).ToList();
+
+            // Prepare edges
+            var edges = _allRelations.Select(relation => new
+            {
+                data = new
+                {
+                    id = relation.Id,
+                    source = relation.SourceId,
+                    target = relation.TargetId,
+                    label = relation.RelationType.Replace("_", " "),
+                    relationType = relation.RelationType
+                }
+            }).ToList();
+
+            // Combine nodes and edges
+            var elements = new
+            {
+                nodes = nodes,
+                edges = edges
+            };
+
+            // Call JavaScript interop to initialize Cytoscape
+            _isLoaded = await JSRuntime.InvokeAsync<bool>("cytoscapeInterop.initializeCytoscape", "cy", elements);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = $"Failed to initialize graph: {ex.Message}";
+            StateHasChanged();
+        }
+    }
+
+    private async Task FitToView()
+    {
+        if (_isLoaded)
+        {
+            await JSRuntime.InvokeVoidAsync("cytoscapeInterop.fitToView");
+        }
+    }
+
+    private async Task ResetZoom()
+    {
+        if (_isLoaded)
+        {
+            await JSRuntime.InvokeVoidAsync("cytoscapeInterop.resetZoom");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_isLoaded)
+        {
+            await JSRuntime.InvokeVoidAsync("cytoscapeInterop.destroy");
+        }
+    }
 }
+

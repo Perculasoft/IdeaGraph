@@ -35,4 +35,13 @@ namespace IdeaGraph.Client.Models
         public List<string>? Tags { get; set; }
         public string? Status { get; set; }
     }
+
+    public class Relation
+    {
+        public string Id { get; set; } = string.Empty;
+        public string SourceId { get; set; } = string.Empty;
+        public string TargetId { get; set; } = string.Empty;
+        public string RelationType { get; set; } = string.Empty;
+        public double Weight { get; set; }
+    }
 }
