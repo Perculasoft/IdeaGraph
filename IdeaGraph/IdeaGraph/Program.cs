@@ -63,6 +63,17 @@ namespace IdeaGraph
                 httpClient.BaseAddress = new Uri(navManager.BaseUri);
                 return new IdeaGraph.Client.Services.IdeaService(httpClient);
             });
+            
+            // Configure HttpClient for client's RelationService to call server API
+            builder.Services.AddScoped<IdeaGraph.Client.Services.RelationService>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient();
+                var navManager = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+                httpClient.BaseAddress = new Uri(navManager.BaseUri);
+                return new IdeaGraph.Client.Services.RelationService(httpClient);
+            });
+            
             builder.Services.AddHttpClient();
 
             var app = builder.Build();
