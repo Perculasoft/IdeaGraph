@@ -1,11 +1,6 @@
 from dotenv import load_dotenv
 import os
 
-
-
-
-LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
 # Load environment variables from .env file
 load_dotenv()
 
@@ -28,3 +23,4 @@ CHROMA_DATABASE = os.getenv("CHROMA_DATABASE", "IdeaGraph")
 X_API_KEY = os.getenv("X_API_KEY", "")
 ALLOW_ORIGINS  = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "").split(",") if o.strip()]
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
