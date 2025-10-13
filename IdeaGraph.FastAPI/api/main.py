@@ -7,14 +7,10 @@ import os, uuid, httpx, math, tempfile
 import chromadb
 from dotenv import load_dotenv
 import logging
+from config import CLIENT_ID, CLIENT_SECRET, TENANT_ID, OPENAI_API_KEY, OPENAI_ORG_ID, EMBED_MODEL, CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE, X_API_KEY, ALLOW_ORIGINS, LOG_FORMAT, LOG_LEVEL
+from model import IdeaUpdateIn, mailrequest, filecontentresponse, IdeaIn, RelationIn
 from fastapi.openapi.utils import get_openapi
 
-# Load environment variables from .env file
-load_dotenv()
-
-# --- Logging Configuration ---
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
-LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 # Configure root logger
 logging.basicConfig(
@@ -30,14 +26,7 @@ logger = logging.getLogger(__name__)
 
 # --- ENV ---
 logger.debug("Loading environment variables...")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-OPENAI_ORG_ID  = os.getenv("OPENAI_ORG_ID", "")
-EMBED_MODEL    = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-CHROMA_API_KEY = os.getenv("CHROMA_API_KEY", "")
-CHROMA_TENANT  = os.getenv("CHROMA_TENANT", "")
-CHROMA_DATABASE = os.getenv("CHROMA_DATABASE", "IdeaGraph")
-X_API_KEY = os.getenv("X_API_KEY", "")
-ALLOW_ORIGINS  = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "").split(",") if o.strip()]
+
 
 if not OPENAI_API_KEY:
     logger.error("OPENAI_API_KEY is required but not found in environment variables.")
@@ -141,24 +130,6 @@ except Exception as e:
     logger.error("Please check your CHROMA_API_KEY, CHROMA_TENANT, and CHROMA_DATABASE settings in .env file.")
     raise
 
-# --- Schemas ---
-class IdeaIn(BaseModel):
-    title: str
-    description: str = ""
-    tags: list[str] = []
-    status: str = "New"
-
-class IdeaUpdateIn(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    tags: list[str] | None = None
-    status: str | None = None
-
-class RelationIn(BaseModel):
-    source_id: str
-    target_id: str
-    relation_type: str  # depends_on / extends / contradicts / synergizes_with
-    weight: float = 1.0
 
 # --- Helper Functions ---
 def parse_description_from_document(document: str) -> str:
