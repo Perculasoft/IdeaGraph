@@ -109,10 +109,17 @@ if ALLOW_ORIGINS:
 # --- Chroma Client/Collections ---
 logger.info("Connecting to ChromaDB Cloud...")
 try:
+    # Configure settings to explicitly disable local persistence
+    # This prevents ChromaDB from trying to create local directories
+    settings = chromadb.Settings()
+    settings.is_persistent = False
+    settings.persist_directory = ""
+    
     client = chromadb.CloudClient(
         tenant=CHROMA_TENANT,
         database=CHROMA_DATABASE,
-        api_key=CHROMA_API_KEY
+        api_key=CHROMA_API_KEY,
+        settings=settings
     )
     logger.info("Successfully connected to ChromaDB Cloud")
     logger.debug(f"ChromaDB tenant: {CHROMA_TENANT}, database: {CHROMA_DATABASE}")
