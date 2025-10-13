@@ -49,13 +49,40 @@
             {
                 <div id="cy" style="width: 100%; height: 700px;"></div>
                 <div class="p-3 bg-light border-top">
-                    <small class="text-muted">
-                        <strong>Legend:</strong>
-                        <span class="ms-3"><span class="badge bg-danger">depends_on</span></span>
-                        <span class="ms-2"><span class="badge bg-success">extends</span></span>
-                        <span class="ms-2"><span class="badge bg-warning">contradicts</span></span>
-                        <span class="ms-2"><span class="badge bg-primary">synergizes_with</span></span>
-                        <span class="ms-4"><i class="bi bi-info-circle"></i> Click on a node to view idea details</span>
+                    <div class="mb-3">
+                        <strong>Status Legend:</strong>
+                        <div class="d-flex flex-wrap mt-2">
+                            <span class="me-3 mb-2">
+                                <span class="badge" style="background-color: #6366f1;">New</span>
+                            </span>
+                            <span class="me-3 mb-2">
+                                <span class="badge" style="background-color: #8b5cf6;">Concept</span>
+                            </span>
+                            <span class="me-3 mb-2">
+                                <span class="badge" style="background-color: #3b82f6;">Specification</span>
+                            </span>
+                            <span class="me-3 mb-2">
+                                <span class="badge" style="background-color: #10b981;">Ready</span>
+                            </span>
+                            <span class="me-3 mb-2">
+                                <span class="badge" style="background-color: #059669;">Implemented</span>
+                            </span>
+                            <span class="me-3 mb-2">
+                                <span class="badge" style="background-color: #6b7280;">Discarded</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <strong>Relation Types:</strong>
+                        <div class="d-flex flex-wrap mt-2">
+                            <span class="me-3 mb-2"><span class="badge bg-danger">depends_on</span></span>
+                            <span class="me-3 mb-2"><span class="badge bg-success">extends</span></span>
+                            <span class="me-3 mb-2"><span class="badge bg-warning">contradicts</span></span>
+                            <span class="me-3 mb-2"><span class="badge" style="background-color: #8b5cf6;">synergizes_with</span></span>
+                        </div>
+                    </div>
+                    <small class="text-muted mt-2 d-block">
+                        <i class="bi bi-info-circle"></i> Click on a node to view idea details
                     </small>
                 </div>
             }
@@ -131,13 +158,28 @@
     {
         try
         {
-            // Prepare nodes
+            // Define status colors
+            var statusColors = new Dictionary<string, string>
+            {
+                { "New", "#6366f1" },           // Indigo
+                { "Concept", "#8b5cf6" },       // Purple
+                { "Specification", "#3b82f6" }, // Blue
+                { "Ready", "#10b981" },         // Green
+                { "Implemented", "#059669" },   // Dark Green
+                { "Discarded", "#6b7280" }      // Gray
+            };
+
+            // Prepare nodes with status colors
             var nodes = _ideas.Select(idea => new
             {
                 data = new
                 {
                     id = idea.Id,
-                    label = idea.Title
+                    label = idea.Title,
+                    status = idea.Status,
+                    color = statusColors.ContainsKey(idea.Status) 
+                        ? statusColors[idea.Status] 
+                        : statusColors["New"]
                 }
             }).ToList();
 
