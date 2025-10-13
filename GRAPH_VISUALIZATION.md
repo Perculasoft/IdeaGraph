@@ -15,6 +15,14 @@ The `/graph` route displays an interactive graph visualization of all ideas and 
 
 - Interactive graph with zoom and pan capabilities
 - Node clicking to navigate to idea details
+- **Status-based node coloring**: Each idea node is colored based on its status:
+  - **Indigo**: New
+  - **Purple**: Concept
+  - **Blue**: Specification
+  - **Green**: Ready
+  - **Dark Green**: Implemented
+  - **Gray**: Discarded
+- **Labels displayed above nodes**: Node titles appear above the nodes in a small, readable font
 - Color-coded edges based on relationship types:
   - **Red**: depends_on
   - **Green**: extends
@@ -22,7 +30,7 @@ The `/graph` route displays an interactive graph visualization of all ideas and 
   - **Purple**: synergizes_with
 - Control buttons for "Fit to View" and "Reset Zoom"
 - Loading states and error handling
-- Responsive layout using force-directed (CoSE) algorithm
+- Responsive layout using improved force-directed layout (CoSE-Bilkent algorithm)
 
 ## Technical Details
 
@@ -41,11 +49,16 @@ The `/graph` route displays an interactive graph visualization of all ideas and 
 
 ### Cytoscape.js Configuration
 
-The graph uses the CoSE (Compound Spring Embedder) layout algorithm with the following key parameters:
+The graph uses the CoSE-Bilkent (Compound Spring Embedder - Bilkent University) layout algorithm, which provides better graph visualization compared to the standard CoSE layout. Key parameters:
 - `idealEdgeLength`: 150px
-- `nodeRepulsion`: 400000
-- `gravity`: 80
-- Auto-fitting to container on initialization
+- `nodeRepulsion`: 4500
+- `gravity`: 0.25
+- `numIter`: 2500 (number of iterations for better layout quality)
+- `tile`: true (for better space utilization)
+- Node size: 40x40px
+- Labels positioned above nodes with 10px margin
+
+The layout is specifically optimized for displaying ideas and their relationships with clear visual separation.
 
 ## Usage
 
