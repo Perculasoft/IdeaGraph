@@ -39,6 +39,11 @@ CHROMA_DATABASE = os.getenv("CHROMA_DATABASE", "IdeaGraph")
 X_API_KEY = os.getenv("X_API_KEY", "")
 ALLOW_ORIGINS  = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "").split(",") if o.strip()]
 
+# Graph API (optional for mail endpoints)
+CLIENT_ID = os.getenv("CLIENT_ID", "")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
+TENANT_ID = os.getenv("TENANT_ID", "")
+
 if not OPENAI_API_KEY:
     logger.error("OPENAI_API_KEY is required but not found in environment variables.")
     logger.error("Please create a .env file based on .env.example and set your OPENAI_API_KEY.")
@@ -140,6 +145,18 @@ except Exception as e:
     logger.error(f"Failed to connect to ChromaDB Cloud: {e}", exc_info=True)
     logger.error("Please check your CHROMA_API_KEY, CHROMA_TENANT, and CHROMA_DATABASE settings in .env file.")
     raise
+
+# --- Include Routers ---
+# Import and include Graph API mail router
+if CLIENT_ID and CLIENT_SECRET and TENANT_ID:
+    try:
+        from api.graph import router as graph_router
+        app.include_router(graph_router)
+        logger.info("Graph API mail endpoints registered")
+    except Exception as e:
+        logger.warning(f"Failed to register Graph API mail router: {e}")
+else:
+    logger.warning("Graph API credentials not configured - mail endpoints disabled")
 
 # --- Schemas ---
 class IdeaIn(BaseModel):
