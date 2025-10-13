@@ -44,9 +44,35 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="api\" />
+    <Folder Include="api\model\" />
+    <Folder Include="api\helper\" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="api\config.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="api\graph.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="api\helper\parse_description_from_document.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="api\main.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="api\model\filecontentresponse.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="api\model\IdeaIn.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="api\model\IdeaUpdateIn.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="api\model\mailrequest.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="api\model\RelationIn.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>

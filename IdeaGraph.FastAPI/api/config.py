@@ -22,3 +22,6 @@ CHROMA_DATABASE = os.getenv("CHROMA_DATABASE", "IdeaGraph")
 # FastAPI
 X_API_KEY = os.getenv("X_API_KEY", "")
 ALLOW_ORIGINS  = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "").split(",") if o.strip()]
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
