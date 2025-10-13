@@ -44,6 +44,11 @@ ALLOW_ORIGINS=http://localhost:3000,http://localhost:5173
 
 # Optional: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL) - default: INFO
 LOG_LEVEL=INFO
+
+# Optional: Microsoft Graph API credentials for mail endpoints
+CLIENT_ID=your-azure-app-client-id
+CLIENT_SECRET=your-azure-app-client-secret
+TENANT_ID=your-azure-tenant-id
 ```
 
 ### 3. Run the Application
@@ -86,6 +91,7 @@ python validate_chromadb_config.py
 
 ## API Endpoints
 
+### Core Endpoints
 - `GET /health` - Health check
 - `POST /idea` - Create a new idea
 - `GET /ideas` - List all ideas
@@ -94,6 +100,22 @@ python validate_chromadb_config.py
 - `POST /relation` - Create a relation between ideas
 - `GET /relations/{idea_id}` - Get relations for an idea
 
+### Mail Endpoints (requires Graph API configuration)
+- `POST /mail/send` - Send an email via Microsoft Graph API
+- `GET /mail/receive` - Fetch emails from shared mailbox and create ideas
+
+To enable mail endpoints, add the following to your `.env` file:
+```env
+CLIENT_ID=your-azure-app-client-id
+CLIENT_SECRET=your-azure-app-client-secret
+TENANT_ID=your-azure-tenant-id
+```
+
+**Note**: Mail endpoints require an Azure App Registration with the following Microsoft Graph API permissions:
+- `Mail.Send` (for sending emails)
+- `Mail.ReadWrite` (for reading and moving emails)
+- `Mail.ReadWrite.Shared` (for accessing shared mailboxes)
+
 ## Features
 
 - **Semantic Search**: Uses OpenAI embeddings for semantic similarity
@@ -101,6 +123,62 @@ python validate_chromadb_config.py
 - **Relation Tracking**: Track relationships between ideas (depends_on, extends, contradicts, synergizes_with)
 - **CORS Support**: Configurable CORS for frontend integration
 - **Comprehensive Logging**: Structured logging with configurable log levels for error tracking and debugging
+- **Mail Integration**: Send emails and automatically create ideas from incoming emails via Microsoft Graph API
+
+## Mail Endpoints Usage
+
+### Send Email
+Send an email using Microsoft Graph API:
+
+```bash
+POST /mail/send
+Content-Type: application/json
+X-Api-Key: your-api-key
+
+{
+  "sender": "user@example.com",
+  "subject": "Meeting Request",
+  "body": "<h1>Hello</h1><p>This is an HTML email.</p>",
+  "to": "recipient1@example.com,recipient2@example.com",
+  "cc": "cc@example.com"
+}
+```
+
+- **sender**: Email address to send from (must have appropriate permissions)
+- **subject**: Email subject line
+- **body**: HTML body content
+- **to**: Comma-separated email addresses for To recipients
+- **cc**: Optional comma-separated email addresses for Cc recipients
+
+### Receive Emails and Create Ideas
+Fetch emails from the shared mailbox `idea@angermeier.net` and automatically create ideas:
+
+```bash
+GET /mail/receive
+X-Api-Key: your-api-key
+```
+
+This endpoint will:
+1. Fetch all unread emails from the shared mailbox inbox
+2. Extract the subject (used as idea title) and body (used as description)
+3. Use AI to generate 5 relevant tags for each email
+4. Create a new idea in ChromaDB with the email content
+5. Move the processed email to the Archive folder
+
+**Example Response:**
+```json
+{
+  "message": "Processed 3 emails",
+  "ideas_created": [
+    {
+      "id": "abc-123",
+      "title": "Feature Request: Dark Mode",
+      "tags": ["feature", "ui", "accessibility", "design", "enhancement"],
+      "email_id": "AAMkADQ..."
+    }
+  ]
+}
+```
 
 ## Logging
 

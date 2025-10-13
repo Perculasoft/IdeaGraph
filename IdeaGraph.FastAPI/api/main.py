@@ -28,6 +28,11 @@ logger = logging.getLogger(__name__)
 logger.debug("Loading environment variables...")
 
 
+# Graph API (optional for mail endpoints)
+CLIENT_ID = os.getenv("CLIENT_ID", "")
+CLIENT_SECRET = os.getenv("CLIENT_SECRET", "")
+TENANT_ID = os.getenv("TENANT_ID", "")
+
 if not OPENAI_API_KEY:
     logger.error("OPENAI_API_KEY is required but not found in environment variables.")
     logger.error("Please create a .env file based on .env.example and set your OPENAI_API_KEY.")
@@ -130,6 +135,36 @@ except Exception as e:
     logger.error("Please check your CHROMA_API_KEY, CHROMA_TENANT, and CHROMA_DATABASE settings in .env file.")
     raise
 
+# --- Include Routers ---
+# Import and include Graph API mail router
+if CLIENT_ID and CLIENT_SECRET and TENANT_ID:
+    try:
+        from api.graph import router as graph_router
+        app.include_router(graph_router)
+        logger.info("Graph API mail endpoints registered")
+    except Exception as e:
+        logger.warning(f"Failed to register Graph API mail router: {e}")
+else:
+    logger.warning("Graph API credentials not configured - mail endpoints disabled")
+
+# --- Schemas ---
+class IdeaIn(BaseModel):
+    title: str
+    description: str = ""
+    tags: list[str] = []
+    status: str = "New"
+
+class IdeaUpdateIn(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    tags: list[str] | None = None
+    status: str | None = None
+
+class RelationIn(BaseModel):
+    source_id: str
+    target_id: str
+    relation_type: str  # depends_on / extends / contradicts / synergizes_with
+    weight: float = 1.0
 
 # --- Helper Functions ---
 def parse_description_from_document(document: str) -> str:

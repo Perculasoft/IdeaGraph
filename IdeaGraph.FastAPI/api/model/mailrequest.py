@@ -1,6 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field
-from typing import List, Optional, Literal
-from datetime import datetime, date
+from pydantic import BaseModel
+from typing import Optional
+
 
 class MailRequest(BaseModel):
     sender: str
@@ -8,3 +8,4 @@ class MailRequest(BaseModel):
     body: str
     to: str
     cc: Optional[str] = None
+
