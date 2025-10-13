@@ -8,7 +8,7 @@ import chromadb
 from dotenv import load_dotenv
 import logging
 from config import CLIENT_ID, CLIENT_SECRET, TENANT_ID, OPENAI_API_KEY, OPENAI_ORG_ID, EMBED_MODEL, CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE, X_API_KEY, ALLOW_ORIGINS, LOG_FORMAT, LOG_LEVEL
-from model import IdeaUpdateIn, mailrequest, filecontentresponse, IdeaIn, RelationIn
+from model import mailrequest, filecontentresponse
 from fastapi.openapi.utils import get_openapi
 
 
@@ -26,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 # --- ENV ---
 logger.debug("Loading environment variables...")
-
 
 # Graph API (optional for mail endpoints)
 CLIENT_ID = os.getenv("CLIENT_ID", "")
@@ -47,6 +46,24 @@ if ALLOW_ORIGINS:
 api_key_header = APIKeyHeader(name="X-Api-Key", auto_error=False)
 
 app = FastAPI()
+
+class IdeaIn(BaseModel):
+    title: str
+    description: str = ""
+    tags: list[str] = []
+    status: str = "New"
+
+class IdeaUpdateIn(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    tags: list[str] | None = None
+    status: str | None = None
+
+class RelationIn(BaseModel):
+    source_id: str
+    target_id: str
+    relation_type: str  # depends_on / extends / contradicts / synergizes_with
+    weight: float = 1.0
 
 def custom_openapi():
     if app.openapi_schema:
@@ -139,32 +156,13 @@ except Exception as e:
 # Import and include Graph API mail router
 if CLIENT_ID and CLIENT_SECRET and TENANT_ID:
     try:
-        from api.graph import router as graph_router
+        from graph import router as graph_router
         app.include_router(graph_router)
         logger.info("Graph API mail endpoints registered")
     except Exception as e:
         logger.warning(f"Failed to register Graph API mail router: {e}")
 else:
     logger.warning("Graph API credentials not configured - mail endpoints disabled")
-
-# --- Schemas ---
-class IdeaIn(BaseModel):
-    title: str
-    description: str = ""
-    tags: list[str] = []
-    status: str = "New"
-
-class IdeaUpdateIn(BaseModel):
-    title: str | None = None
-    description: str | None = None
-    tags: list[str] | None = None
-    status: str | None = None
-
-class RelationIn(BaseModel):
-    source_id: str
-    target_id: str
-    relation_type: str  # depends_on / extends / contradicts / synergizes_with
-    weight: float = 1.0
 
 # --- Helper Functions ---
 def parse_description_from_document(document: str) -> str:
@@ -217,6 +215,7 @@ async def embed_text(text: str):
         raise
 
 # --- API ---
+
 @app.get("/health")
 def health(api_key: str = Depends(verify_api_key)):
     logger.debug("Health check requested")
