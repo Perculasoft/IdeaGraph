@@ -1,6 +1,8 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
 
 <div class="page">
+    <Toolbar OnAddIdea="HandleAddIdea" />
     <main>
         <article class="content px-4">
             @Body
@@ -13,6 +15,13 @@
         </div>
     </footer>
 </div>
+
+@code {
+    private void HandleAddIdea()
+    {
+        Navigation.NavigateTo("/Idea/new");
+    }
+}
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.

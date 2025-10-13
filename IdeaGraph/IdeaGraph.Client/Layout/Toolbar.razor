@@ -1,0 +1,35 @@
+@inject NavigationManager Navigation
+
+<nav class="toolbar">
+    <div class="toolbar-container">
+        <div class="toolbar-brand">
+            <a href="/" class="brand-link">IdeaGraph</a>
+        </div>
+        <div class="toolbar-menu">
+            <a href="/" class="toolbar-item @(IsActive("/") ? "active" : "")">
+                🏠 Home
+            </a>
+            <a href="/graph" class="toolbar-item @(IsActive("/graph") ? "active" : "")">
+                📊 Graph
+            </a>
+            <button class="toolbar-item toolbar-button" @onclick="OnAddIdea">
+                ➕ Add Idea
+            </button>
+        </div>
+    </div>
+</nav>
+
+@code {
+    [Parameter]
+    public EventCallback OnAddIdea { get; set; }
+
+    private bool IsActive(string path)
+    {
+        var currentPath = new Uri(Navigation.Uri).AbsolutePath;
+        if (path == "/" && currentPath == "/")
+            return true;
+        if (path != "/" && currentPath.StartsWith(path, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+}
