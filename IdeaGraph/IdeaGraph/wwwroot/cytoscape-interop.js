@@ -3,10 +3,9 @@ window.cytoscapeInterop = {
     
     initializeCytoscape: function(containerId, elements) {
         try {
-            // Register cose-bilkent layout if available
-            if (typeof cytoscape !== 'undefined' && typeof cytoscapeCoseBilkent !== 'undefined') {
-                cytoscape.use(cytoscapeCoseBilkent);
-            }
+            // Note: When loading cytoscape-cose-bilkent via CDN script tag,
+            // the library automatically registers itself with cytoscape.
+            // No manual registration is needed.
 
             // Destroy existing instance if any
             if (this.cyInstance) {
