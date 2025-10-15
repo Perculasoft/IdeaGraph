@@ -3,9 +3,8 @@ window.cytoscapeInterop = {
     
     initializeCytoscape: function(containerId, elements) {
         try {
-            // Note: When loading cytoscape-cose-bilkent via CDN script tag,
-            // the library automatically registers itself with cytoscape.
-            // No manual registration is needed.
+            // Using built-in 'cose' layout (force-directed)
+            // This provides similar functionality to cose-bilkent without external dependencies
 
             // Destroy existing instance if any
             if (this.cyInstance) {
@@ -93,20 +92,17 @@ window.cytoscapeInterop = {
                     }
                 ],
                 layout: {
-                    name: 'cose-bilkent',
+                    name: 'cose',
                     animate: false,
                     idealEdgeLength: 150,
-                    nodeRepulsion: 4500,
-                    edgeElasticity: 0.45,
-                    nestingFactor: 0.1,
-                    gravity: 0.25,
-                    numIter: 2500,
-                    tile: true,
-                    tilingPaddingVertical: 10,
-                    tilingPaddingHorizontal: 10,
-                    gravityRangeCompound: 1.5,
-                    gravityCompound: 1.0,
-                    gravityRange: 3.8
+                    nodeRepulsion: 8000,
+                    edgeElasticity: 100,
+                    nestingFactor: 5,
+                    gravity: 80,
+                    numIter: 1000,
+                    initialTemp: 200,
+                    coolingFactor: 0.95,
+                    minTemp: 1.0
                 }
             });
 
