@@ -60,6 +60,16 @@ The graph uses the CoSE-Bilkent (Compound Spring Embedder - Bilkent University) 
 
 The layout is specifically optimized for displaying ideas and their relationships with clear visual separation.
 
+#### Library Loading
+
+The Cytoscape.js library and the cose-bilkent extension are loaded via CDN in `App.razor`:
+```html
+<script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
+<script src="https://unpkg.com/cytoscape-cose-bilkent@4.1.0/cytoscape-cose-bilkent.js"></script>
+```
+
+When loaded via CDN script tags, the cose-bilkent extension automatically registers itself with Cytoscape. No manual registration is needed in the JavaScript code.
+
 ## Usage
 
 Navigate to `/graph` in the application to view the graph visualization. Click on any node to navigate to that idea's detail page.
