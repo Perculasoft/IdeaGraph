@@ -30,7 +30,7 @@ The `/graph` route displays an interactive graph visualization of all ideas and 
   - **Purple**: synergizes_with
 - Control buttons for "Fit to View" and "Reset Zoom"
 - Loading states and error handling
-- Responsive layout using improved force-directed layout (CoSE-Bilkent algorithm)
+- Responsive layout using force-directed layout (CoSE algorithm)
 
 ## Technical Details
 
@@ -49,12 +49,12 @@ The `/graph` route displays an interactive graph visualization of all ideas and 
 
 ### Cytoscape.js Configuration
 
-The graph uses the CoSE-Bilkent (Compound Spring Embedder - Bilkent University) layout algorithm, which provides better graph visualization compared to the standard CoSE layout. Key parameters:
+The graph uses the built-in CoSE (Compound Spring Embedder) layout algorithm, which provides a force-directed graph visualization. Key parameters:
 - `idealEdgeLength`: 150px
-- `nodeRepulsion`: 4500
-- `gravity`: 0.25
-- `numIter`: 2500 (number of iterations for better layout quality)
-- `tile`: true (for better space utilization)
+- `nodeRepulsion`: 8000
+- `gravity`: 80
+- `numIter`: 1000 (number of iterations for better layout quality)
+- `edgeElasticity`: 100
 - Node size: 40x40px
 - Labels positioned above nodes with 10px margin
 
@@ -62,13 +62,12 @@ The layout is specifically optimized for displaying ideas and their relationship
 
 #### Library Loading
 
-The Cytoscape.js library and the cose-bilkent extension are loaded via CDN in `App.razor`:
+The Cytoscape.js library is loaded via CDN in `App.razor`:
 ```html
 <script src="https://unpkg.com/cytoscape@3.28.1/dist/cytoscape.min.js"></script>
-<script src="https://unpkg.com/cytoscape-cose-bilkent@4.1.0/cytoscape-cose-bilkent.js"></script>
 ```
 
-When loaded via CDN script tags, the cose-bilkent extension automatically registers itself with Cytoscape. No manual registration is needed in the JavaScript code.
+The CoSE layout is built into Cytoscape.js and requires no additional extensions or manual registration.
 
 ## Usage
 
