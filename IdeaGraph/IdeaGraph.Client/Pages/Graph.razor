@@ -96,6 +96,7 @@
     private bool _isLoading = true;
     private bool _isLoaded = false;
     private bool _dataLoaded = false;
+    private bool _initializationAttempted = false;
     private string? _errorMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -104,9 +105,11 @@
         {
             await LoadGraphData();
         }
-        else if (_dataLoaded && !_isLoaded)
+        else if (_dataLoaded && !_isLoaded && !_initializationAttempted)
         {
             // Initialize Cytoscape after the cy div has been rendered
+            // Only attempt once to prevent infinite loops
+            _initializationAttempted = true;
             await InitializeCytoscape();
         }
     }
@@ -183,18 +186,27 @@
                 }
             }).ToList();
 
-            // Prepare edges
-            var edges = _allRelations.Select(relation => new
-            {
-                data = new
+            // Create a set of valid node IDs for fast lookup
+            var validNodeIds = new HashSet<string>(_ideas.Select(i => i.Id));
+
+            // Filter edges to only include those with valid source and target nodes
+            // This prevents Cytoscape errors when relations reference non-existent ideas
+            var edges = _allRelations
+                .Where(relation => 
+                    validNodeIds.Contains(relation.SourceId) && 
+                    validNodeIds.Contains(relation.TargetId))
+                .Select(relation => new
                 {
-                    id = relation.Id,
-                    source = relation.SourceId,
-                    target = relation.TargetId,
-                    label = relation.RelationType.Replace("_", " "),
-                    relationType = relation.RelationType
-                }
-            }).ToList();
+                    data = new
+                    {
+                        id = relation.Id,
+                        source = relation.SourceId,
+                        target = relation.TargetId,
+                        label = relation.RelationType.Replace("_", " "),
+                        relationType = relation.RelationType
+                    }
+                })
+                .ToList();
 
             // Combine nodes and edges
             var elements = new
