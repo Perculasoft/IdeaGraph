@@ -289,18 +289,37 @@ def get_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
         meta = res["metadatas"][0] or {}
         doc = res["documents"][0] if res["documents"] else ""
         description = parse_description_from_document(doc)
-        # fetch relations where source_id = idea_id
-        rels = relations.get(where={"source_id": idea_id})
+        # fetch relations where this idea is the source or target
+        outgoing_rels = relations.get(where={"source_id": idea_id})
+        incoming_rels = relations.get(where={"target_id": idea_id})
+        
+        # Combine and deduplicate relations
+        all_rel_ids = set()
         edges = []
-        for i, rid in enumerate(rels["ids"]):
-            m = rels["metadatas"][i] or {}
-            edges.append({
-                "id": rid,
-                "source_id": m.get("source_id"),
-                "target_id": m.get("target_id"),
-                "relation_type": m.get("relation_type"),
-                "weight": m.get("weight", 1.0)
-            })
+        
+        for i, rid in enumerate(outgoing_rels["ids"]):
+            if rid not in all_rel_ids:
+                all_rel_ids.add(rid)
+                m = outgoing_rels["metadatas"][i] or {}
+                edges.append({
+                    "id": rid,
+                    "source_id": m.get("source_id"),
+                    "target_id": m.get("target_id"),
+                    "relation_type": m.get("relation_type"),
+                    "weight": m.get("weight", 1.0)
+                })
+        
+        for i, rid in enumerate(incoming_rels["ids"]):
+            if rid not in all_rel_ids:
+                all_rel_ids.add(rid)
+                m = incoming_rels["metadatas"][i] or {}
+                edges.append({
+                    "id": rid,
+                    "source_id": m.get("source_id"),
+                    "target_id": m.get("target_id"),
+                    "relation_type": m.get("relation_type"),
+                    "weight": m.get("weight", 1.0)
+                })
         tags_str = meta.get("tags", "")
         tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
         logger.info(f"Successfully fetched idea: {idea_id} with {len(edges)} relations")
@@ -386,11 +405,16 @@ def delete_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
         # Delete the idea
         ideas.delete(ids=[idea_id])
         
-        # Also delete any relations where this idea is the source
-        rels = relations.get(where={"source_id": idea_id})
-        if rels["ids"]:
-            relations.delete(ids=rels["ids"])
-            logger.info(f"Deleted {len(rels['ids'])} relations for idea {idea_id}")
+        # Delete any relations where this idea is the source or target
+        outgoing_rels = relations.get(where={"source_id": idea_id})
+        incoming_rels = relations.get(where={"target_id": idea_id})
+        
+        # Combine relation IDs to delete (deduplicate in case of self-relations)
+        all_rel_ids = set(outgoing_rels["ids"]) | set(incoming_rels["ids"])
+        
+        if all_rel_ids:
+            relations.delete(ids=list(all_rel_ids))
+            logger.info(f"Deleted {len(all_rel_ids)} relations for idea {idea_id}")
         
         logger.info(f"Successfully deleted idea with ID: {idea_id}")
         return {"message": "Idea deleted successfully", "id": idea_id}
