@@ -586,18 +586,42 @@ async def add_relation(rel: RelationIn, api_key: str = Depends(verify_api_key)):
 def list_relations(idea_id: str, api_key: str = Depends(verify_api_key)):
     logger.debug(f"Listing relations for idea: {idea_id}")
     try:
-        rels = relations.get(where={"source_id": idea_id})
-        result = [
-            {
-                "id": rels["ids"][i],
-                "source_id": (rels["metadatas"][i] or {}).get("source_id"),
-                "target_id": (rels["metadatas"][i] or {}).get("target_id"),
-                "relation_type": (rels["metadatas"][i] or {}).get("relation_type"),
-                "weight": (rels["metadatas"][i] or {}).get("weight", 1.0),
-            }
-            for i in range(len(rels["ids"]))
-        ]
-        logger.info(f"Found {len(result)} relations for idea {idea_id}")
+        # Get outgoing relations (where this idea is the source)
+        outgoing_rels = relations.get(where={"source_id": idea_id})
+        # Get incoming relations (where this idea is the target)
+        incoming_rels = relations.get(where={"target_id": idea_id})
+        
+        # Combine and deduplicate relations by ID
+        all_rel_ids = set()
+        result = []
+        
+        # Add outgoing relations
+        for i in range(len(outgoing_rels["ids"])):
+            rel_id = outgoing_rels["ids"][i]
+            if rel_id not in all_rel_ids:
+                all_rel_ids.add(rel_id)
+                result.append({
+                    "id": rel_id,
+                    "source_id": (outgoing_rels["metadatas"][i] or {}).get("source_id"),
+                    "target_id": (outgoing_rels["metadatas"][i] or {}).get("target_id"),
+                    "relation_type": (outgoing_rels["metadatas"][i] or {}).get("relation_type"),
+                    "weight": (outgoing_rels["metadatas"][i] or {}).get("weight", 1.0),
+                })
+        
+        # Add incoming relations
+        for i in range(len(incoming_rels["ids"])):
+            rel_id = incoming_rels["ids"][i]
+            if rel_id not in all_rel_ids:
+                all_rel_ids.add(rel_id)
+                result.append({
+                    "id": rel_id,
+                    "source_id": (incoming_rels["metadatas"][i] or {}).get("source_id"),
+                    "target_id": (incoming_rels["metadatas"][i] or {}).get("target_id"),
+                    "relation_type": (incoming_rels["metadatas"][i] or {}).get("relation_type"),
+                    "weight": (incoming_rels["metadatas"][i] or {}).get("weight", 1.0),
+                })
+        
+        logger.info(f"Found {len(result)} relations for idea {idea_id} ({len(outgoing_rels['ids'])} outgoing, {len(incoming_rels['ids'])} incoming)")
         return result
     except Exception as e:
         logger.error(f"Failed to list relations for {idea_id}: {e}", exc_info=True)
