@@ -22,13 +22,23 @@ namespace IdeaGraph.Controllers
             try
             {
                 _logger.LogInformation("Forwarding GET /similar/{ideaId} to FastAPI with k={k}", ideaId, k);
-                var response = await _httpClient.GetFromJsonAsync<List<SimilarIdea>>($"similar/{ideaId}?k={k}");
-                return Ok(response);
-            }
-            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
-            {
-                _logger.LogWarning("Idea {ideaId} not found in FastAPI for similarity search", ideaId);
-                return NotFound(new { error = "Idea not found" });
+                var response = await _httpClient.GetAsync($"similar/{ideaId}?k={k}");
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogWarning("Idea {ideaId} not found in FastAPI for similarity search", ideaId);
+                    return NotFound(new { error = "Idea not found" });
+                }
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    _logger.LogError("FastAPI returned error {StatusCode} for similar ideas: {Error}", response.StatusCode, errorContent);
+                    return StatusCode((int)response.StatusCode, new { error = "Failed to find similar ideas", detail = errorContent });
+                }
+                
+                var similarIdeas = await response.Content.ReadFromJsonAsync<List<SimilarIdea>>();
+                return Ok(similarIdeas);
             }
             catch (Exception ex)
             {

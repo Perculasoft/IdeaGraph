@@ -39,14 +39,14 @@ namespace IdeaGraph.Controllers
         {
             try
             {
-                _logger.LogInformation("Forwarding POST /section to FastAPI: {Name}", request.Name);
+                _logger.LogInformation("Forwarding POST /sections to FastAPI: {Name}", request.Name);
 
                 if (string.IsNullOrWhiteSpace(request.Name))
                 {
                     return BadRequest(new { error = "Name is required" });
                 }
 
-                var response = await _httpClient.PostAsJsonAsync("section", request);
+                var response = await _httpClient.PostAsJsonAsync("sections", request);
                 response.EnsureSuccessStatusCode();
 
                 var createdSection = await response.Content.ReadFromJsonAsync<Section>();
