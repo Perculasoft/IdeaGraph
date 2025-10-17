@@ -31,8 +31,18 @@ namespace IdeaGraph
             // Add API Controllers
             builder.Services.AddControllers();
 
+            static string EnsureTrailingSlash(string url)
+            {
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    return url;
+                }
+
+                return url.EndsWith('/') ? url : url + "/";
+            }
+
             // Configure HttpClient for FastAPI (used by controllers)
-            var fastApiUrl = builder.Configuration["FastAPI:BaseUrl"] ?? "https://api.angermeier.net";
+            var fastApiUrl = EnsureTrailingSlash(builder.Configuration["FastAPI:BaseUrl"] ?? "https://api.angermeier.net");
             var xApiKey = builder.Configuration["FastAPI:X-Api-Key"] ?? "";
             builder.Services.AddHttpClient("FastAPI", client =>
             {
@@ -46,7 +56,7 @@ namespace IdeaGraph
             });
 
             // Configure HttpClient for KiGate API (used by controllers)
-            var kiGateApiUrl = builder.Configuration["KiGateApi:KiGateApiUrl"];
+            var kiGateApiUrl = EnsureTrailingSlash(builder.Configuration["KiGateApi:KiGateApiUrl"] ?? string.Empty);
             var kiGateBearerToken = builder.Configuration["KiGateApi:KiGateBearerToken"];
             if (!string.IsNullOrEmpty(kiGateApiUrl))
             {
@@ -64,7 +74,7 @@ namespace IdeaGraph
             }
 
             // Configure HttpClient for IdeaService (now points to local API)
-            var ideaGraphApiUrl = builder.Configuration["IdeaGraphApi:BaseUrl"] ?? "https://localhost:5001/api/";
+            var ideaGraphApiUrl = EnsureTrailingSlash(builder.Configuration["IdeaGraphApi:BaseUrl"] ?? "https://localhost:5001/api/");
             builder.Services.AddHttpClient<IdeaService>(client =>
             {
                 client.BaseAddress = new Uri(ideaGraphApiUrl);
