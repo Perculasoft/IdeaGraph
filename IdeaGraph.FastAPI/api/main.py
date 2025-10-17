@@ -279,7 +279,7 @@ def health(api_key: str = Depends(verify_api_key)):
 
 # --- Section CRUD Endpoints ---
 
-@app.post("/section")
+@app.post("/sections")
 def create_section(section: SectionIn, api_key: str = Depends(verify_api_key)):
     logger.info(f"Creating new section: '{section.name}'")
     
