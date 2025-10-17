@@ -24,8 +24,21 @@ namespace IdeaGraph.Controllers
             try
             {
                 _logger.LogInformation("Forwarding GET /ideas to FastAPI");
-                var response = await _httpClient.GetFromJsonAsync<List<Idea>>($"ideas");
-                return Ok(response);
+                var response = await _httpClient.GetAsync("ideas");
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("FastAPI returned {StatusCode} when fetching ideas", response.StatusCode);
+                    return StatusCode((int)response.StatusCode, new { error = "Failed to list ideas", detail = $"FastAPI returned {response.StatusCode}" });
+                }
+                
+                var ideas = await response.Content.ReadFromJsonAsync<List<Idea>>();
+                return Ok(ideas);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP error fetching ideas from FastAPI");
+                return StatusCode(500, new { error = "Failed to list ideas", detail = ex.Message });
             }
             catch (Exception ex)
             {

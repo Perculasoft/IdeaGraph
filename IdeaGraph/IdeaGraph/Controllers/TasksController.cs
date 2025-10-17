@@ -24,8 +24,21 @@ namespace IdeaGraph.Controllers
             try
             {
                 _logger.LogInformation("Forwarding GET /tasks to FastAPI");
-                var response = await _httpClient.GetFromJsonAsync<List<IdeaTask>>($"tasks");
-                return Ok(response);
+                var response = await _httpClient.GetAsync("tasks");
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("FastAPI returned {StatusCode} when fetching tasks", response.StatusCode);
+                    return StatusCode((int)response.StatusCode, new { error = "Failed to list tasks", detail = $"FastAPI returned {response.StatusCode}" });
+                }
+                
+                var tasks = await response.Content.ReadFromJsonAsync<List<IdeaTask>>();
+                return Ok(tasks);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP error fetching tasks from FastAPI");
+                return StatusCode(500, new { error = "Failed to list tasks", detail = ex.Message });
             }
             catch (Exception ex)
             {
@@ -40,8 +53,21 @@ namespace IdeaGraph.Controllers
             try
             {
                 _logger.LogInformation("Forwarding GET /tasks/idea/{ideaId} to FastAPI", ideaId);
-                var response = await _httpClient.GetFromJsonAsync<List<IdeaTask>>($"tasks/idea/{ideaId}");
-                return Ok(response);
+                var response = await _httpClient.GetAsync($"tasks/idea/{ideaId}");
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning("FastAPI returned {StatusCode} when fetching tasks for idea {ideaId}", response.StatusCode, ideaId);
+                    return StatusCode((int)response.StatusCode, new { error = "Failed to list tasks for idea", detail = $"FastAPI returned {response.StatusCode}" });
+                }
+                
+                var tasks = await response.Content.ReadFromJsonAsync<List<IdeaTask>>();
+                return Ok(tasks);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogError(ex, "HTTP error fetching tasks for idea {ideaId} from FastAPI", ideaId);
+                return StatusCode(500, new { error = "Failed to list tasks for idea", detail = ex.Message });
             }
             catch (Exception ex)
             {
