@@ -25,3 +25,6 @@ ALLOW_ORIGINS  = [o.strip() for o in os.getenv("ALLOW_ORIGINS", "").split(",") i
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
+# GitHub API
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+GITHUB_API_URL = "https://api.github.com"
