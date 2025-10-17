@@ -112,6 +112,16 @@ namespace IdeaGraph
                 return new IdeaGraph.Client.Services.SimilarService(httpClient);
             });
             
+            // Configure HttpClient for client's SectionService to call server API
+            builder.Services.AddScoped<IdeaGraph.Client.Services.SectionService>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient();
+                var navManager = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+                httpClient.BaseAddress = new Uri(navManager.BaseUri);
+                return new IdeaGraph.Client.Services.SectionService(httpClient);
+            });
+            
             builder.Services.AddHttpClient();
 
             var app = builder.Build();
