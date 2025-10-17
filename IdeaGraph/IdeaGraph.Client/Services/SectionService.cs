@@ -48,7 +48,14 @@ namespace IdeaGraph.Client.Services
             try
             {
                 var response = await _httpClient.PostAsJsonAsync("api/sections", request);
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var detail = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Failed to create section. Status: {response.StatusCode}. Detail: {detail}");
+                    Debug.WriteLine($"Failed to create section. Status: {response.StatusCode}. Detail: {detail}");
+                    return null;
+                }
+
                 return await response.Content.ReadFromJsonAsync<Section>();
             }
             catch (Exception ex)
@@ -64,7 +71,14 @@ namespace IdeaGraph.Client.Services
             try
             {
                 var response = await _httpClient.PutAsJsonAsync($"api/sections/{id}", request);
-                response.EnsureSuccessStatusCode();
+                if (!response.IsSuccessStatusCode)
+                {
+                    var detail = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Failed to update section {id}. Status: {response.StatusCode}. Detail: {detail}");
+                    Debug.WriteLine($"Failed to update section {id}. Status: {response.StatusCode}. Detail: {detail}");
+                    return null;
+                }
+
                 return await response.Content.ReadFromJsonAsync<Section>();
             }
             catch (Exception ex)
