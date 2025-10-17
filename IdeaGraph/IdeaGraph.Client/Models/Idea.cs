@@ -44,4 +44,9 @@ namespace IdeaGraph.Client.Models
         public string RelationType { get; set; } = string.Empty;
         public double Weight { get; set; }
     }
+
+    public class SimilarIdea : Idea
+    {
+        public double? Distance { get; set; }
+    }
 }

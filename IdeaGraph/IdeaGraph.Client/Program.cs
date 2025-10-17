@@ -14,6 +14,7 @@ namespace IdeaGraph.Client
             builder.Services.AddScoped<IdeaService>();
             builder.Services.AddScoped<RelationService>();
             builder.Services.AddScoped<KiGateService>();
+            builder.Services.AddScoped<SimilarService>();
 
             await builder.Build().RunAsync();
         }
