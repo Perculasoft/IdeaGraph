@@ -66,7 +66,19 @@ namespace IdeaGraph.Controllers
                 }
 
                 var response = await _httpClient.PostAsJsonAsync("sections", request);
-                response.EnsureSuccessStatusCode();
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogWarning("FastAPI returned 404 when creating section {Name}", request.Name);
+                    return NotFound(new { error = "Section resource not found" });
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    var detail = await response.Content.ReadAsStringAsync();
+                    _logger.LogWarning("FastAPI returned {StatusCode} when creating section {Name}. Detail: {Detail}", response.StatusCode, request.Name, detail);
+                    return StatusCode((int)response.StatusCode, new { error = "Failed to create section", detail });
+                }
 
                 var createdSection = await response.Content.ReadFromJsonAsync<Section>();
                 return Ok(createdSection);
