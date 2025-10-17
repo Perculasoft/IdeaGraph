@@ -16,6 +16,7 @@ namespace IdeaGraph.Client
             builder.Services.AddScoped<SectionService>();
             builder.Services.AddScoped<KiGateService>();
             builder.Services.AddScoped<SimilarService>();
+            builder.Services.AddScoped<TaskService>();
 
             await builder.Build().RunAsync();
         }

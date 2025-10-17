@@ -7,7 +7,7 @@ import os, uuid, httpx, math, tempfile
 import chromadb
 from dotenv import load_dotenv
 import logging
-from config import CLIENT_ID, CLIENT_SECRET, TENANT_ID, OPENAI_API_KEY, OPENAI_ORG_ID, EMBED_MODEL, CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE, X_API_KEY, ALLOW_ORIGINS, LOG_FORMAT, LOG_LEVEL
+from config import CLIENT_ID, CLIENT_SECRET, TENANT_ID, OPENAI_API_KEY, OPENAI_ORG_ID, EMBED_MODEL, CHROMA_API_KEY, CHROMA_TENANT, CHROMA_DATABASE, X_API_KEY, ALLOW_ORIGINS, LOG_FORMAT, LOG_LEVEL, KIGATE_API_URL, KIGATE_BEARER_TOKEN
 from model import mailrequest, filecontentresponse
 from fastapi.openapi.utils import get_openapi
 
@@ -66,6 +66,24 @@ class IdeaUpdateIn(BaseModel):
     tags: list[str] | None = None
     status: str | None = None
     section_id: str | None = None
+
+class TaskIn(BaseModel):
+    title: str
+    description: str = ""
+    repository: str = ""
+    ki_suggestions: str = ""
+    tags: list[str] = []
+    status: str = "New"
+    idea_id: str
+
+class TaskUpdateIn(BaseModel):
+    title: str | None = None
+    description: str | None = None
+    repository: str | None = None
+    ki_suggestions: str | None = None
+    tags: list[str] | None = None
+    status: str | None = None
+    idea_id: str | None = None
 
 class RelationIn(BaseModel):
     source_id: str
@@ -155,7 +173,8 @@ try:
     ideas = client.get_or_create_collection(name="ideas")        # ids, documents, embeddings, metadatas
     relations = client.get_or_create_collection(name="relations")# store edges as docs w/ metadata
     sections = client.get_or_create_collection(name="sections")  # ids, documents, metadatas
-    logger.info("Successfully initialized ChromaDB collections: 'ideas', 'relations', and 'sections'")
+    tasks = client.get_or_create_collection(name="tasks")        # ids, documents, embeddings, metadatas
+    logger.info("Successfully initialized ChromaDB collections: 'ideas', 'relations', 'sections', and 'tasks'")
 except Exception as e:
     logger.error(f"Failed to connect to ChromaDB Cloud: {e}", exc_info=True)
     logger.error("Please check your CHROMA_API_KEY, CHROMA_TENANT, and CHROMA_DATABASE settings in .env file.")
@@ -194,6 +213,27 @@ def parse_description_from_document(document: str) -> str:
         return ""
     except Exception as e:
         logger.warning(f"Failed to parse description from document: {e}")
+        return ""
+
+def parse_task_description_from_document(document: str) -> str:
+    """
+    Parse description from task document format: {title}\n\n{description}\n\nRepository: {repo}\n\nTags: {tags}
+    Returns empty string if parsing fails.
+    """
+    try:
+        # Split by double newline to separate title, description, repository and tags
+        parts = document.split("\n\n")
+        if len(parts) >= 2:
+            # The description is everything between title and repository/tags sections
+            description_parts = []
+            for i, part in enumerate(parts[1:], 1):
+                if part.startswith("Repository: ") or part.startswith("Tags: "):
+                    break
+                description_parts.append(part)
+            return "\n\n".join(description_parts)
+        return ""
+    except Exception as e:
+        logger.warning(f"Failed to parse task description from document: {e}")
         return ""
 
 # --- OpenAI Embedding ---
@@ -823,6 +863,574 @@ def list_relations(idea_id: str, api_key: str = Depends(verify_api_key)):
     except Exception as e:
         logger.error(f"Failed to list relations for {idea_id}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to list relations: {str(e)}")
+
+# --- Task CRUD Endpoints ---
+
+@app.post("/task")
+async def create_task(task: TaskIn, api_key: str = Depends(verify_api_key)):
+    logger.info(f"Creating new task: '{task.title}' for idea {task.idea_id}")
+    logger.debug(f"Task details - title: '{task.title}', description length: {len(task.description)}, tags: {task.tags}, repository: {task.repository}")
+    
+    try:
+        # Verify the idea exists
+        idea_res = ideas.get(ids=[task.idea_id])
+        if not idea_res["ids"]:
+            logger.warning(f"Idea {task.idea_id} not found for task creation")
+            raise HTTPException(404, "Idea not found")
+        
+        _id = str(uuid.uuid4())
+        doc = f"{task.title}\n\n{task.description}\n\nRepository: {task.repository}\n\nTags: {', '.join(task.tags)}"
+        vec = await embed_text(doc)
+        meta = {
+            "title": task.title,
+            "repository": task.repository,
+            "ki_suggestions": task.ki_suggestions,
+            "tags": ",".join(task.tags),
+            "created_at": datetime.utcnow().isoformat(),
+            "status": task.status,
+            "idea_id": task.idea_id
+        }
+        tasks.add(ids=[_id], documents=[doc], embeddings=[vec], metadatas=[meta])
+        logger.info(f"Successfully created task with ID: {_id}")
+        return {
+            "id": _id,
+            "title": meta["title"],
+            "description": task.description,
+            "repository": meta["repository"],
+            "ki_suggestions": meta["ki_suggestions"],
+            "tags": task.tags,
+            "created_at": meta["created_at"],
+            "status": meta["status"],
+            "idea_id": meta["idea_id"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create task '{task.title}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to create task: {str(e)}")
+
+@app.get("/tasks")
+def list_tasks(api_key: str = Depends(verify_api_key)):
+    logger.debug("Listing all tasks")
+    try:
+        res = tasks.get(include=["metadatas", "documents"])
+        out = []
+        for i, _id in enumerate(res["ids"]):
+            meta = res["metadatas"][i] or {}
+            doc = res["documents"][i] if res["documents"] else ""
+            tags_str = meta.get("tags", "")
+            tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
+            
+            # Parse description from document
+            description = parse_task_description_from_document(doc)
+            
+            task_dict = {
+                "id": _id,
+                "title": meta.get("title", ""),
+                "description": description,
+                "repository": meta.get("repository", ""),
+                "ki_suggestions": meta.get("ki_suggestions", ""),
+                "tags": tags_list,
+                "created_at": meta.get("created_at", ""),
+                "status": meta.get("status", "New"),
+                "idea_id": meta.get("idea_id", "")
+            }
+            out.append(task_dict)
+        # Sort by created_at desc
+        out.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        logger.info(f"Successfully listed {len(out)} tasks")
+        return out
+    except Exception as e:
+        logger.error(f"Failed to list tasks: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to list tasks: {str(e)}")
+
+@app.get("/tasks/idea/{idea_id}")
+def list_tasks_by_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
+    logger.debug(f"Listing tasks for idea: {idea_id}")
+    try:
+        res = tasks.get(where={"idea_id": idea_id}, include=["metadatas", "documents"])
+        out = []
+        for i, _id in enumerate(res["ids"]):
+            meta = res["metadatas"][i] or {}
+            doc = res["documents"][i] if res["documents"] else ""
+            tags_str = meta.get("tags", "")
+            tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
+            
+            # Parse description from document
+            description = parse_task_description_from_document(doc)
+            
+            task_dict = {
+                "id": _id,
+                "title": meta.get("title", ""),
+                "description": description,
+                "repository": meta.get("repository", ""),
+                "ki_suggestions": meta.get("ki_suggestions", ""),
+                "tags": tags_list,
+                "created_at": meta.get("created_at", ""),
+                "status": meta.get("status", "New"),
+                "idea_id": meta.get("idea_id", "")
+            }
+            out.append(task_dict)
+        # Sort by created_at desc
+        out.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+        logger.info(f"Successfully listed {len(out)} tasks for idea {idea_id}")
+        return out
+    except Exception as e:
+        logger.error(f"Failed to list tasks for idea {idea_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to list tasks: {str(e)}")
+
+@app.get("/tasks/{task_id}")
+def get_task(task_id: str, api_key: str = Depends(verify_api_key)):
+    logger.debug(f"Fetching task with ID: {task_id}")
+    try:
+        res = tasks.get(ids=[task_id], include=["metadatas", "documents"])
+        if not res["ids"]:
+            logger.warning(f"Task not found: {task_id}")
+            raise HTTPException(404, "Task not found")
+        meta = res["metadatas"][0] or {}
+        doc = res["documents"][0] if res["documents"] else ""
+        
+        # Parse description from document
+        description = parse_task_description_from_document(doc)
+        
+        tags_str = meta.get("tags", "")
+        tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
+        logger.info(f"Successfully fetched task: {task_id}")
+        
+        return {
+            "id": task_id,
+            "title": meta.get("title", ""),
+            "description": description,
+            "repository": meta.get("repository", ""),
+            "ki_suggestions": meta.get("ki_suggestions", ""),
+            "tags": tags_list,
+            "created_at": meta.get("created_at", ""),
+            "status": meta.get("status", "New"),
+            "idea_id": meta.get("idea_id", "")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get task {task_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get task: {str(e)}")
+
+@app.put("/tasks/{task_id}")
+async def update_task(task_id: str, task_update: TaskUpdateIn, api_key: str = Depends(verify_api_key)):
+    logger.info(f"Updating task with ID: {task_id}")
+    logger.debug(f"Update details - title: {task_update.title}, description length: {len(task_update.description or '')}, tags: {task_update.tags}")
+    
+    try:
+        # Check if task exists and get current data
+        res = tasks.get(ids=[task_id], include=["metadatas", "documents"])
+        if not res["ids"]:
+            logger.warning(f"Task not found for update: {task_id}")
+            raise HTTPException(404, "Task not found")
+        
+        # Get current metadata and document
+        current_meta = res["metadatas"][0] or {}
+        current_doc = res["documents"][0] if res["documents"] else ""
+        current_description = parse_task_description_from_document(current_doc)
+        
+        # Update only provided fields
+        updated_title = task_update.title if task_update.title is not None else current_meta.get("title", "")
+        updated_description = task_update.description if task_update.description is not None else current_description
+        updated_repository = task_update.repository if task_update.repository is not None else current_meta.get("repository", "")
+        updated_ki_suggestions = task_update.ki_suggestions if task_update.ki_suggestions is not None else current_meta.get("ki_suggestions", "")
+        updated_tags = task_update.tags if task_update.tags is not None else [t.strip() for t in current_meta.get("tags", "").split(",") if t.strip()]
+        updated_status = task_update.status if task_update.status is not None else current_meta.get("status", "New")
+        updated_idea_id = task_update.idea_id if task_update.idea_id is not None else current_meta.get("idea_id", "")
+        
+        # Create new document for embedding
+        doc = f"{updated_title}\n\n{updated_description}\n\nRepository: {updated_repository}\n\nTags: {', '.join(updated_tags)}"
+        vec = await embed_text(doc)
+        
+        # Update metadata
+        new_meta = {
+            "title": updated_title,
+            "repository": updated_repository,
+            "ki_suggestions": updated_ki_suggestions,
+            "tags": ",".join(updated_tags),
+            "created_at": current_meta.get("created_at", datetime.utcnow().isoformat()),
+            "status": updated_status,
+            "idea_id": updated_idea_id
+        }
+        
+        # Update in ChromaDB
+        tasks.update(ids=[task_id], documents=[doc], embeddings=[vec], metadatas=[new_meta])
+        logger.info(f"Successfully updated task with ID: {task_id}")
+        
+        return {
+            "id": task_id,
+            "title": new_meta["title"],
+            "description": updated_description,
+            "repository": new_meta["repository"],
+            "ki_suggestions": new_meta["ki_suggestions"],
+            "tags": updated_tags,
+            "created_at": new_meta["created_at"],
+            "status": new_meta["status"],
+            "idea_id": new_meta["idea_id"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update task {task_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to update task: {str(e)}")
+
+@app.delete("/tasks/{task_id}")
+def delete_task(task_id: str, api_key: str = Depends(verify_api_key)):
+    logger.info(f"Deleting task with ID: {task_id}")
+    
+    try:
+        # Check if task exists
+        res = tasks.get(ids=[task_id])
+        if not res["ids"]:
+            logger.warning(f"Task not found for deletion: {task_id}")
+            raise HTTPException(404, "Task not found")
+        
+        # Delete the task
+        tasks.delete(ids=[task_id])
+        
+        logger.info(f"Successfully deleted task with ID: {task_id}")
+        return {"message": "Task deleted successfully", "id": task_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete task {task_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to delete task: {str(e)}")
+
+@app.post("/tasks/{task_id}/improve")
+async def improve_task(task_id: str, api_key: str = Depends(verify_api_key)):
+    """
+    Improve task with AI:
+    1. Normalize the description for a developer/Codex/Copilot
+    2. Auto-generate title from text
+    3. Extract 5 tags using KiGate API text-keyword-extractor-de agent
+    4. Review with AI - set status to Ready if good, Review if issues (save feedback in KiSuggestions)
+    """
+    logger.info(f"Improving task with ID: {task_id}")
+    
+    try:
+        # Get current task
+        res = tasks.get(ids=[task_id], include=["metadatas", "documents"])
+        if not res["ids"]:
+            logger.warning(f"Task not found for improvement: {task_id}")
+            raise HTTPException(404, "Task not found")
+        
+        current_meta = res["metadatas"][0] or {}
+        current_doc = res["documents"][0] if res["documents"] else ""
+        current_description = parse_task_description_from_document(current_doc)
+        
+        if not current_description.strip():
+            logger.warning(f"Task {task_id} has no description to improve")
+            raise HTTPException(400, "Task has no description to improve")
+        
+        # Step 1 & 2: Improve description and generate title with OpenAI
+        logger.debug(f"Calling OpenAI API to improve task description and generate title")
+        headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
+        if OPENAI_ORG_ID:
+            headers["OpenAI-Organization"] = OPENAI_ORG_ID
+        
+        prompt = f"""You are a technical task optimizer for developers.
+
+Given the following task description, please:
+1. Normalize and improve the description to create a clear, well-structured task for a developer or AI assistant (Codex/Copilot)
+2. Format the description as Markdown with clear sections
+3. Correct spelling and grammar errors
+4. Optimize text flow and clarity
+5. Generate a concise, descriptive title (max 80 characters) that summarizes the task
+
+Original Description:
+{current_description}
+
+Please respond ONLY with a JSON object in this exact format (no markdown, no code blocks):
+{{"improved_description": "your improved description in Markdown format", "title": "Generated Task Title"}}"""
+
+        try:
+            async with httpx.AsyncClient(timeout=60) as client_http:
+                r = await client_http.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers=headers,
+                    json={
+                        "model": "gpt-4o-mini",
+                        "messages": [
+                            {"role": "system", "content": "You are a helpful assistant that optimizes technical task descriptions. Always respond with valid JSON only."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        "temperature": 0.7,
+                        "max_tokens": 2000
+                    }
+                )
+            r.raise_for_status()
+            response_data = r.json()
+            
+            content = response_data["choices"][0]["message"]["content"].strip()
+            logger.debug(f"OpenAI response: {content[:200]}...")
+            
+            # Parse JSON response
+            import json
+            if content.startswith("```"):
+                content = content.split("```")[1]
+                if content.startswith("json"):
+                    content = content[4:]
+                content = content.strip()
+            
+            result = json.loads(content)
+            improved_description = result["improved_description"]
+            generated_title = result["title"]
+            
+            logger.info(f"Successfully improved description and generated title")
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from OpenAI API: {e.response.status_code} - {e.response.text}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"OpenAI API error: {e.response.text}")
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse OpenAI response as JSON: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail="Failed to parse AI response")
+        
+        # Step 3: Extract tags using KiGate API with text-keyword-extractor-de agent
+        new_tags = []
+        if KIGATE_API_URL and KIGATE_BEARER_TOKEN:
+            try:
+                logger.debug(f"Calling KiGate API text-keyword-extractor-de agent")
+                kigate_headers = {"Authorization": f"Bearer {KIGATE_BEARER_TOKEN}"}
+                async with httpx.AsyncClient(timeout=60) as client_http:
+                    kigate_response = await client_http.post(
+                        f"{KIGATE_API_URL}/agent/execute",
+                        headers=kigate_headers,
+                        json={
+                            "agent_name": "text-keyword-extractor-de",
+                            "message": improved_description
+                        }
+                    )
+                kigate_response.raise_for_status()
+                kigate_data = kigate_response.json()
+                
+                # Extract tags from the agent response
+                if kigate_data.get("result") and kigate_data["result"].get("content"):
+                    tags_content = kigate_data["result"]["content"]
+                    # Try to parse tags from the response (assuming comma-separated or JSON format)
+                    try:
+                        # Try JSON array first
+                        new_tags = json.loads(tags_content)
+                        if not isinstance(new_tags, list):
+                            new_tags = [str(new_tags)]
+                    except:
+                        # Fall back to comma-separated
+                        new_tags = [t.strip() for t in tags_content.split(",") if t.strip()]
+                    new_tags = new_tags[:5]  # Ensure max 5 tags
+                    logger.info(f"Successfully extracted {len(new_tags)} tags from KiGate")
+            except Exception as e:
+                logger.warning(f"Failed to extract tags with KiGate API: {e}")
+                # Fall back to generating tags with OpenAI
+                new_tags = []
+        
+        # If KiGate tag extraction failed, use OpenAI as fallback
+        if not new_tags:
+            try:
+                logger.debug("Falling back to OpenAI for tag extraction")
+                tag_prompt = f"Extract exactly 5 relevant German keywords/tags from this task description. Return only a JSON array of strings: {improved_description}"
+                async with httpx.AsyncClient(timeout=30) as client_http:
+                    r = await client_http.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers=headers,
+                        json={
+                            "model": "gpt-4o-mini",
+                            "messages": [
+                                {"role": "system", "content": "You are a helpful assistant. Always respond with valid JSON array only."},
+                                {"role": "user", "content": tag_prompt}
+                            ],
+                            "temperature": 0.5,
+                            "max_tokens": 100
+                        }
+                    )
+                r.raise_for_status()
+                tag_response = r.json()
+                tag_content = tag_response["choices"][0]["message"]["content"].strip()
+                if tag_content.startswith("```"):
+                    tag_content = tag_content.split("```")[1]
+                    if tag_content.startswith("json"):
+                        tag_content = tag_content[4:]
+                    tag_content = tag_content.strip()
+                new_tags = json.loads(tag_content)[:5]
+                logger.info(f"Successfully generated {len(new_tags)} tags with OpenAI fallback")
+            except Exception as e:
+                logger.warning(f"Failed to generate tags with OpenAI fallback: {e}")
+                new_tags = ["task", "development"]  # Default tags
+        
+        # Step 4: Review with AI - evaluate if task is meaningful, coherent, and feasible
+        review_prompt = f"""You are a senior technical reviewer.
+
+Review this task and determine if it is:
+1. Meaningful - does it have a clear purpose?
+2. Coherent - is it well-structured and understandable?
+3. Feasible - can it realistically be implemented?
+
+Task Title: {generated_title}
+
+Task Description:
+{improved_description}
+
+Please respond ONLY with a JSON object:
+{{"is_ready": true/false, "feedback": "brief feedback on issues or confirmation if ready (max 200 chars)"}}"""
+
+        try:
+            async with httpx.AsyncClient(timeout=30) as client_http:
+                r = await client_http.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers=headers,
+                    json={
+                        "model": "gpt-4o-mini",
+                        "messages": [
+                            {"role": "system", "content": "You are a helpful technical reviewer. Always respond with valid JSON only."},
+                            {"role": "user", "content": review_prompt}
+                        ],
+                        "temperature": 0.3,
+                        "max_tokens": 300
+                    }
+                )
+            r.raise_for_status()
+            review_response = r.json()
+            review_content = review_response["choices"][0]["message"]["content"].strip()
+            
+            if review_content.startswith("```"):
+                review_content = review_content.split("```")[1]
+                if review_content.startswith("json"):
+                    review_content = review_content[4:]
+                review_content = review_content.strip()
+            
+            review_result = json.loads(review_content)
+            is_ready = review_result.get("is_ready", False)
+            feedback = review_result.get("feedback", "")
+            
+            new_status = "Ready" if is_ready else "Review"
+            ki_suggestions = "" if is_ready else feedback
+            
+            logger.info(f"Task review complete: status={new_status}, feedback={feedback[:50]}...")
+            
+        except Exception as e:
+            logger.warning(f"Failed to review task with AI: {e}")
+            # Default to Review status with generic feedback
+            new_status = "Review"
+            ki_suggestions = "AI review failed - please review manually"
+        
+        # Update the task with all improvements
+        updated_repository = current_meta.get("repository", "")
+        updated_idea_id = current_meta.get("idea_id", "")
+        
+        doc = f"{generated_title}\n\n{improved_description}\n\nRepository: {updated_repository}\n\nTags: {', '.join(new_tags)}"
+        vec = await embed_text(doc)
+        
+        new_meta = {
+            "title": generated_title,
+            "repository": updated_repository,
+            "ki_suggestions": ki_suggestions,
+            "tags": ",".join(new_tags),
+            "created_at": current_meta.get("created_at", datetime.utcnow().isoformat()),
+            "status": new_status,
+            "idea_id": updated_idea_id
+        }
+        
+        # Update in ChromaDB
+        tasks.update(ids=[task_id], documents=[doc], embeddings=[vec], metadatas=[new_meta])
+        logger.info(f"Successfully improved and updated task {task_id}")
+        
+        return {
+            "id": task_id,
+            "title": new_meta["title"],
+            "description": improved_description,
+            "repository": new_meta["repository"],
+            "ki_suggestions": new_meta["ki_suggestions"],
+            "tags": new_tags,
+            "created_at": new_meta["created_at"],
+            "status": new_meta["status"],
+            "idea_id": new_meta["idea_id"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to improve task {task_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to improve task: {str(e)}")
+
+@app.post("/tasks/{task_id}/github-issue")
+async def create_github_issue_from_task(task_id: str, api_key: str = Depends(verify_api_key)):
+    """
+    Create a GitHub issue from a task that has status 'Ready'
+    """
+    logger.info(f"Creating GitHub issue for task: {task_id}")
+    
+    try:
+        # Get current task
+        res = tasks.get(ids=[task_id], include=["metadatas", "documents"])
+        if not res["ids"]:
+            logger.warning(f"Task not found: {task_id}")
+            raise HTTPException(404, "Task not found")
+        
+        current_meta = res["metadatas"][0] or {}
+        current_doc = res["documents"][0] if res["documents"] else ""
+        
+        # Check if task is ready
+        if current_meta.get("status") != "Ready":
+            logger.warning(f"Task {task_id} is not in Ready status")
+            raise HTTPException(400, "Task must be in 'Ready' status to create GitHub issue")
+        
+        repository = current_meta.get("repository", "")
+        if not repository:
+            logger.warning(f"Task {task_id} has no repository specified")
+            raise HTTPException(400, "Task must have a repository specified")
+        
+        title = current_meta.get("title", "")
+        description = parse_task_description_from_document(current_doc)
+        
+        # Use KiGate API to create GitHub issue
+        if not KIGATE_API_URL or not KIGATE_BEARER_TOKEN:
+            logger.error("KiGate API is not configured")
+            raise HTTPException(503, "KiGate API is not configured")
+        
+        try:
+            logger.debug(f"Calling KiGate API to create GitHub issue for repository: {repository}")
+            kigate_headers = {"Authorization": f"Bearer {KIGATE_BEARER_TOKEN}"}
+            
+            # Format the text for GitHub issue
+            issue_text = f"# {title}\n\n{description}"
+            
+            async with httpx.AsyncClient(timeout=60) as client_http:
+                kigate_response = await client_http.post(
+                    f"{KIGATE_API_URL}/api/github/create-issue",
+                    headers=kigate_headers,
+                    json={
+                        "repository": repository,
+                        "text": issue_text
+                    }
+                )
+            kigate_response.raise_for_status()
+            issue_data = kigate_response.json()
+            
+            if issue_data.get("error"):
+                logger.error(f"KiGate API returned error: {issue_data['error']}")
+                raise HTTPException(500, f"Failed to create GitHub issue: {issue_data['error']}")
+            
+            logger.info(f"Successfully created GitHub issue #{issue_data.get('issue_number')} for task {task_id}")
+            
+            return {
+                "issue_number": issue_data.get("issue_number"),
+                "title": issue_data.get("title", title),
+                "url": issue_data.get("url", ""),
+                "error": None
+            }
+            
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error from KiGate API: {e.response.status_code} - {e.response.text}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"KiGate API error: {e.response.text}")
+        except Exception as e:
+            logger.error(f"Failed to create GitHub issue via KiGate: {e}", exc_info=True)
+            raise HTTPException(status_code=500, detail=f"Failed to create GitHub issue: {str(e)}")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create GitHub issue for task {task_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to create GitHub issue: {str(e)}")
 
 # --- Main Entry Point ---
 if __name__ == "__main__":

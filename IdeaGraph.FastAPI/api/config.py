@@ -28,3 +28,7 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 # GitHub API
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_API_URL = "https://api.github.com"
+
+# KiGate API
+KIGATE_API_URL = os.getenv("KIGATE_API_URL", "")
+KIGATE_BEARER_TOKEN = os.getenv("KIGATE_BEARER_TOKEN", "")
