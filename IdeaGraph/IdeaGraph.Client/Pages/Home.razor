@@ -8,10 +8,10 @@
 <PageTitle>Home - IdeaGraph</PageTitle>
 
 <div class="container-fluid mt-4">
-    <!-- List of ideas -->
+    <!-- Kanban Board -->
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h3>List of ideas</h3>
+            <h3>Ideas Kanban Board</h3>
             <button class="btn btn-sm btn-outline-primary" @onclick="LoadIdeas" disabled="@isLoading">
                 @if (isLoading)
                 {
@@ -39,30 +39,57 @@
             }
             else
             {
-                <ul class="list-group list-group-flush">
-                    @foreach (var idea in ideas)
+                <div class="kanban-board">
+                    @foreach (var status in kanbanStatuses)
                     {
-                        <li class="list-group-item">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div class="ms-2 me-auto flex-grow-1">
-                                    <div class="fw-bold">@idea.Title</div>                                  
-                                    <div class="mt-1">
-                                        <span class="badge @GetStatusBadgeClass(idea.Status)">@idea.Status</span>
-                                    </div>
-                                </div>
-                                <div class="d-flex align-items-start gap-2">
-                                    <span class="badge bg-primary rounded-pill" title="Created: @idea.CreatedAt">@GetRelativeTime(idea.CreatedAt)</span>
-                                    <button class="btn btn-sm btn-outline-info" @onclick="() => NavigateToDetail(idea.Id)" title="View Details">
-                                        👁️
-                                    </button>                                
-                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeleteIdea(idea)" title="Delete">
-                                        🗑️
-                                    </button>
-                                </div>
+                        <div class="kanban-column @(dragOverColumn == status ? "drag-over" : "")"
+                             @ondrop="() => HandleDrop(status)"
+                             @ondrop:preventDefault
+                             @ondragover="() => HandleDragOver(status)"
+                             @ondragover:preventDefault
+                             @ondragleave="HandleDragLeave"
+                             @ondragleave:preventDefault>
+                            <div class="kanban-column-header">
+                                <span>@status</span>
+                                <span class="kanban-column-count">@GetIdeasForStatus(status).Count</span>
                             </div>
-                        </li>
+                            <div class="kanban-column-body">
+                                @{
+                                    var statusIdeas = GetIdeasForStatus(status);
+                                    if (statusIdeas.Count == 0)
+                                    {
+                                        <div class="kanban-empty">No ideas</div>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var idea in statusIdeas)
+                                        {
+                                            <div class="kanban-card @(draggingIdea?.Id == idea.Id ? "dragging" : "")"
+                                                 draggable="true"
+                                                 @ondragstart="() => HandleDragStart(idea)"
+                                                 @ondragend="HandleDragEnd">
+                                                <div class="kanban-card-title">@idea.Title</div>
+                                                <div class="kanban-card-footer">
+                                                    <span class="badge bg-primary rounded-pill" title="Created: @idea.CreatedAt">
+                                                        @GetRelativeTime(idea.CreatedAt)
+                                                    </span>
+                                                    <div class="kanban-card-actions">
+                                                        <button class="btn btn-sm btn-outline-info" @onclick="() => NavigateToDetail(idea.Id)" title="View Details">
+                                                            👁️
+                                                        </button>
+                                                        <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeleteIdea(idea)" title="Delete">
+                                                            🗑️
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        }
+                                    }
+                                }
+                            </div>
+                        </div>
                     }
-                </ul>
+                </div>
             }
         </div>
     </div>
@@ -117,8 +144,10 @@
     private bool isDeleting = false;
     private string deleteErrorMessage = string.Empty;
 
-    // Description visibility state
-    private HashSet<string> expandedDescriptions = new();
+    // Kanban state
+    private readonly List<string> kanbanStatuses = new() { "New", "Concept", "Specification", "Ready", "Discarded" };
+    private Idea? draggingIdea = null;
+    private string? dragOverColumn = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -133,7 +162,9 @@
 
         try
         {
-            ideas = await IdeaService.GetIdeasAsync();
+            var allIdeas = await IdeaService.GetIdeasAsync();
+            // Filter out "Implemented" status ideas
+            ideas = allIdeas.Where(i => i.Status != "Implemented").ToList();
         }
         catch (Exception)
         {
@@ -143,6 +174,72 @@
         {
             isLoading = false;
             StateHasChanged();
+        }
+    }
+
+    // Kanban methods
+    private List<Idea> GetIdeasForStatus(string status)
+    {
+        return ideas.Where(i => i.Status == status).ToList();
+    }
+
+    private void HandleDragStart(Idea idea)
+    {
+        draggingIdea = idea;
+    }
+
+    private void HandleDragEnd()
+    {
+        draggingIdea = null;
+        dragOverColumn = null;
+        StateHasChanged();
+    }
+
+    private void HandleDragOver(string status)
+    {
+        dragOverColumn = status;
+    }
+
+    private void HandleDragLeave()
+    {
+        dragOverColumn = null;
+    }
+
+    private async Task HandleDrop(string newStatus)
+    {
+        dragOverColumn = null;
+        
+        if (draggingIdea == null || draggingIdea.Status == newStatus)
+        {
+            draggingIdea = null;
+            return;
+        }
+
+        var ideaToUpdate = draggingIdea;
+        draggingIdea = null;
+
+        try
+        {
+            var updateRequest = new IdeaUpdateRequest
+            {
+                Status = newStatus
+            };
+
+            var updatedIdea = await IdeaService.UpdateIdeaAsync(ideaToUpdate.Id, updateRequest);
+            if (updatedIdea != null)
+            {
+                // Update the idea in the local list
+                var index = ideas.FindIndex(i => i.Id == ideaToUpdate.Id);
+                if (index >= 0)
+                {
+                    ideas[index] = updatedIdea;
+                }
+                StateHasChanged();
+            }
+        }
+        catch (Exception)
+        {
+            // Silently fail - idea will stay in original column
         }
     }
 
@@ -227,7 +324,7 @@
     }
        
 
-    // Status badge helper
+    // Status badge helper (kept for potential future use)
     private string GetStatusBadgeClass(string status)
     {
         return status switch
