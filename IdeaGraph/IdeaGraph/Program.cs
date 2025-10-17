@@ -45,6 +45,24 @@ namespace IdeaGraph
                 }
             });
 
+            // Configure HttpClient for KiGate API (used by controllers)
+            var kiGateApiUrl = builder.Configuration["KiGateApi:KiGateApiUrl"];
+            var kiGateBearerToken = builder.Configuration["KiGateApi:KiGateBearerToken"];
+            if (!string.IsNullOrEmpty(kiGateApiUrl))
+            {
+                builder.Services.AddHttpClient("KiGateAPI", client =>
+                {
+                    client.BaseAddress = new Uri(kiGateApiUrl);
+                    client.Timeout = TimeSpan.FromSeconds(60);
+                    // Add Bearer token if configured
+                    if (!string.IsNullOrEmpty(kiGateBearerToken))
+                    {
+                        client.DefaultRequestHeaders.Authorization = 
+                            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", kiGateBearerToken);
+                    }
+                });
+            }
+
             // Configure HttpClient for IdeaService (now points to local API)
             var ideaGraphApiUrl = builder.Configuration["IdeaGraphApi:BaseUrl"] ?? "https://localhost:5001/api/";
             builder.Services.AddHttpClient<IdeaService>(client =>
@@ -72,6 +90,16 @@ namespace IdeaGraph
                 var navManager = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
                 httpClient.BaseAddress = new Uri(navManager.BaseUri);
                 return new IdeaGraph.Client.Services.RelationService(httpClient);
+            });
+            
+            // Configure HttpClient for client's KiGateService to call server API
+            builder.Services.AddScoped<IdeaGraph.Client.Services.KiGateService>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient();
+                var navManager = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+                httpClient.BaseAddress = new Uri(navManager.BaseUri);
+                return new IdeaGraph.Client.Services.KiGateService(httpClient);
             });
             
             builder.Services.AddHttpClient();
