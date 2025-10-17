@@ -17,13 +17,23 @@ namespace IdeaGraph.Client.Services
         {
             try
             {
-                var similarIdeas = await _httpClient.GetFromJsonAsync<List<SimilarIdea>>($"api/similar/{ideaId}?k={k}");
+                var response = await _httpClient.GetAsync($"api/similar/{ideaId}?k={k}");
+                
+                if (!response.IsSuccessStatusCode)
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Console.WriteLine($"Error fetching similar ideas: {response.StatusCode} - {errorContent}");
+                    Debug.WriteLine($"Error fetching similar ideas: {response.StatusCode} - {errorContent}");
+                    return new List<SimilarIdea>();
+                }
+                
+                var similarIdeas = await response.Content.ReadFromJsonAsync<List<SimilarIdea>>();
                 return similarIdeas ?? new List<SimilarIdea>();
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                Debug.WriteLine(ex.ToString());
+                Console.WriteLine($"Exception fetching similar ideas: {ex}");
+                Debug.WriteLine($"Exception fetching similar ideas: {ex}");
                 return new List<SimilarIdea>();
             }
         }
