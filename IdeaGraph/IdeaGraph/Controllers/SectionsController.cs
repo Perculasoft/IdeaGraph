@@ -26,14 +26,20 @@ namespace IdeaGraph.Controllers
                 _logger.LogInformation("Forwarding GET /sections to FastAPI");
                 var response = await _httpClient.GetAsync("sections");
                 
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    _logger.LogInformation("FastAPI returned 404 when listing sections - returning empty list");
+                    return Ok(new List<Section>());
+                }
+
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning("FastAPI returned {StatusCode} when fetching sections", response.StatusCode);
                     return StatusCode((int)response.StatusCode, new { error = "Failed to list sections", detail = $"FastAPI returned {response.StatusCode}" });
                 }
-                
+
                 var sections = await response.Content.ReadFromJsonAsync<List<Section>>();
-                return Ok(sections);
+                return Ok(sections ?? new List<Section>());
             }
             catch (HttpRequestException ex)
             {
