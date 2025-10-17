@@ -328,6 +328,12 @@ h1:focus {
     border-top: 1px solid var(--dark-border);
 }
 
+.kanban-card-badges {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+}
+
 .kanban-card-actions {
     display: flex;
     gap: 0.25rem;

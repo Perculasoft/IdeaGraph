@@ -2,6 +2,7 @@
 @using IdeaGraph.Client.Models
 @using IdeaGraph.Client.Services
 @inject IdeaService IdeaService
+@inject SectionService SectionService
 @inject NavigationManager Navigation
 @rendermode InteractiveAuto
 
@@ -70,9 +71,23 @@
                                                  @ondragend="HandleDragEnd">
                                                 <div class="kanban-card-title">@idea.Title</div>
                                                 <div class="kanban-card-footer">
-                                                    <span class="badge bg-primary rounded-pill" title="Created: @idea.CreatedAt">
-                                                        @GetRelativeTime(idea.CreatedAt)
-                                                    </span>
+                                                    <div class="kanban-card-badges">
+                                                        <span class="badge bg-primary rounded-pill" title="Created: @idea.CreatedAt">
+                                                            @GetRelativeTime(idea.CreatedAt)
+                                                        </span>
+                                                        @if (!string.IsNullOrEmpty(idea.SectionId))
+                                                        {
+                                                            <span class="badge bg-secondary rounded-pill" title="Section">
+                                                                @GetSectionName(idea.SectionId)
+                                                            </span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-secondary rounded-pill text-muted" title="No Section">
+                                                                No Section
+                                                            </span>
+                                                        }
+                                                    </div>
                                                     <div class="kanban-card-actions">
                                                         <button class="btn btn-sm btn-outline-info" @onclick="() => NavigateToDetail(idea.Id)" title="View Details">
                                                             👁️
@@ -136,6 +151,7 @@
 
 @code {
     private List<Idea> ideas = new();
+    private List<Section> sections = new();
     private bool isLoading = false;
     private string successMessage = string.Empty;
 
@@ -151,7 +167,21 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadSections();
         await LoadIdeas();
+    }
+
+    private async Task LoadSections()
+    {
+        try
+        {
+            sections = await SectionService.GetSectionsAsync();
+        }
+        catch (Exception)
+        {
+            // Silently fail - sections will be empty list
+            sections = new List<Section>();
+        }
     }
 
     private async Task LoadIdeas()
@@ -175,6 +205,12 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private string GetSectionName(string sectionId)
+    {
+        var section = sections.FirstOrDefault(s => s.Id == sectionId);
+        return section?.Name ?? "Unknown";
     }
 
     // Kanban methods
