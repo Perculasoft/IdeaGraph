@@ -2,9 +2,12 @@
 @page "/Ideas/{Id}"
 @using IdeaGraph.Client.Models
 @using IdeaGraph.Client.Services
+@using Microsoft.Extensions.Configuration
 @inject IdeaService IdeaService
+@inject SimilarService SimilarService
 @inject SectionService SectionService
 @inject NavigationManager Navigation
+@inject IConfiguration Configuration
 @rendermode InteractiveAuto
 
 <PageTitle>@(isCreating ? "New Idea" : idea?.Title ?? "Idea Details") - IdeaGraph</PageTitle>
@@ -46,8 +49,8 @@
             </div>
         </div>
 
-        <div class="card mb-3">
-            <div class="card-body">            
+        <div class="card mb-3" style="max-height: 400px; display: flex; flex-direction: column;">
+            <div class="card-body" style="overflow-y: auto; flex: 1;">            
                 @if (!string.IsNullOrEmpty(idea.Description))
                 {
                     <div class="description-content text-white">
@@ -58,6 +61,75 @@
                 {
                     <p class="text-muted">No description provided.</p>
                 }
+            </div>
+        </div>
+
+        <!-- Tabs for Similar and Task -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <ul class="nav nav-tabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(activeTab == "similar" ? "active" : "")" 
+                                @onclick='() => SetActiveTab("similar")' 
+                                type="button" 
+                                role="tab">
+                            Similar
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link @(activeTab == "task" ? "active" : "")" 
+                                @onclick='() => SetActiveTab("task")' 
+                                type="button" 
+                                role="tab">
+                            Task
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content mt-3">
+                    @if (activeTab == "similar")
+                    {
+                        <div class="tab-pane fade show active" role="tabpanel">
+                            @if (isLoadingSimilar)
+                            {
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading similar ideas...</span>
+                                    </div>
+                                    <p class="mt-2 mb-0">Finding similar ideas...</p>
+                                </div>
+                            }
+                            else if (similarIdeas.Any())
+                            {
+                                <div class="list-group">
+                                    @foreach (var similarIdea in similarIdeas)
+                                    {
+                                        var relevanceScore = similarIdea.Distance.HasValue ? 1.0 - similarIdea.Distance.Value : 0.0;
+                                        <a href="/Idea/@similarIdea.Id" class="list-group-item list-group-item-action">
+                                            <div class="d-flex w-100 justify-content-between">
+                                                <h6 class="mb-1">@similarIdea.Title</h6>
+                                                <small class="text-muted">@relevanceScore.ToString("P0")</small>
+                                            </div>
+                                            @if (!string.IsNullOrEmpty(similarIdea.Description))
+                                            {
+                                                <p class="mb-1 text-muted small">@GetPlainTextPreview(similarIdea.Description, 100)</p>
+                                            }
+                                        </a>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No similar ideas found.</p>
+                            }
+                        </div>
+                    }
+                    else if (activeTab == "task")
+                    {
+                        <div class="tab-pane fade show active" role="tabpanel">
+                            <p class="text-muted">Task functionality coming soon...</p>
+                        </div>
+                    }
+                </div>
             </div>
         </div>
 
@@ -256,6 +328,12 @@
     private bool isEnhancing = false;
     private string enhanceErrorMessage = string.Empty;
 
+    // Similar ideas state
+    private List<SimilarIdea> similarIdeas = new();
+    private bool isLoadingSimilar = false;
+    private string activeTab = "similar";
+    private double similarityThreshold = 0.8;
+
     private IdeaUpdateRequest editRequest = new();
     private string currentTag = string.Empty;
 
@@ -284,6 +362,8 @@
         currentTag = string.Empty;
         errorMessage = string.Empty;
         successMessage = string.Empty;
+        similarIdeas = new();
+        activeTab = "similar";
         
         await LoadSections();
         await LoadIdea();
@@ -328,7 +408,20 @@
 
         try
         {
+            // Load similarity threshold from configuration
+            var thresholdValue = Configuration["IdeaGraph:SimilarityThreshold"];
+            if (!string.IsNullOrEmpty(thresholdValue) && double.TryParse(thresholdValue, out var threshold))
+            {
+                similarityThreshold = threshold;
+            }
+
             idea = await IdeaService.GetIdeaAsync(Id);
+            
+            // Load similar ideas after loading the main idea
+            if (idea != null && !isEditing)
+            {
+                await LoadSimilarIdeas();
+            }
         }
         catch (Exception ex)
         {
@@ -339,6 +432,51 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+
+    private async Task LoadSimilarIdeas()
+    {
+        isLoadingSimilar = true;
+        StateHasChanged();
+
+        try
+        {
+            var allSimilar = await SimilarService.GetSimilarIdeasAsync(Id, 10);
+            
+            // Filter by relevance score (distance < (1 - threshold))
+            // Distance is typically 0-2, where lower is more similar
+            // We want to show ideas with distance < (1 - threshold)
+            var distanceThreshold = 1.0 - similarityThreshold;
+            similarIdeas = allSimilar
+                .Where(s => s.Distance.HasValue && s.Distance.Value < distanceThreshold)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load similar ideas: {ex.Message}");
+            similarIdeas = new List<SimilarIdea>();
+        }
+        finally
+        {
+            isLoadingSimilar = false;
+            StateHasChanged();
+        }
+    }
+
+    private void SetActiveTab(string tabName)
+    {
+        activeTab = tabName;
+    }
+
+    private string GetPlainTextPreview(string html, int maxLength)
+    {
+        // Simple HTML tag removal for preview
+        var text = System.Text.RegularExpressions.Regex.Replace(html, "<.*?>", string.Empty);
+        if (text.Length > maxLength)
+        {
+            return text.Substring(0, maxLength) + "...";
+        }
+        return text;
     }
 
     private void StartEdit()

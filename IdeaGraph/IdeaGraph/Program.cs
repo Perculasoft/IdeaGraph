@@ -102,6 +102,16 @@ namespace IdeaGraph
                 return new IdeaGraph.Client.Services.KiGateService(httpClient);
             });
             
+            // Configure HttpClient for client's SimilarService to call server API
+            builder.Services.AddScoped<IdeaGraph.Client.Services.SimilarService>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient();
+                var navManager = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+                httpClient.BaseAddress = new Uri(navManager.BaseUri);
+                return new IdeaGraph.Client.Services.SimilarService(httpClient);
+            });
+            
             builder.Services.AddHttpClient();
 
             var app = builder.Build();
