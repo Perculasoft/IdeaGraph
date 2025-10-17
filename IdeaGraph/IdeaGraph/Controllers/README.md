@@ -17,10 +17,17 @@ Configure the FastAPI backend URL in `appsettings.json`:
 ```json
 {
   "FastAPI": {
-    "BaseUrl": "http://localhost:8000/"
+    "BaseUrl": "http://localhost:8000/",
+    "X-Api-Key": "your-api-key"
+  },
+  "KiGateApi": {
+    "KiGateApiUrl": "https://your-kigate-api-url",
+    "KiGateBearerToken": "your-bearer-token"
   }
 }
 ```
+
+**Note:** The KiGate API configuration is optional. If not configured, KiGate endpoints will return 503 Service Unavailable.
 
 ## Endpoint Mapping
 
@@ -164,6 +171,126 @@ Note: All fields are optional in update requests. Only provided fields will be u
 - `contradicts`: Source idea contradicts target idea
 - `synergizes_with`: Source idea synergizes with target idea
 
+### KiGate API Integration
+
+The KiGate API provides AI-powered features through a centralized agent-driven API Gateway. All endpoints are proxied through `/api/kigate` and require configuration in appsettings.json.
+
+| ASP.NET Core API | KiGate Endpoint | Method | Description |
+|-----------------|------------------|--------|-------------|
+| `/api/kigate/health` | `/health` | GET | Check KiGate API health |
+| `/api/kigate/agents` | `/api/agents` | GET | Get all available agents |
+| `/api/kigate/agent/execute` | `/agent/execute` | POST | Execute an agent with a message |
+| `/api/kigate/openai` | `/api/openai` | POST | Call OpenAI API |
+| `/api/kigate/gemini` | `/api/gemini` | POST | Call Google Gemini API |
+| `/api/kigate/claude` | `/api/claude` | POST | Call Claude API |
+| `/api/kigate/github/create-issue` | `/api/github/create-issue` | POST | Create a GitHub issue with AI improvement |
+
+**Health Check Response:**
+```json
+{
+  "status": "ok",
+  "message": "KiGate API is running"
+}
+```
+
+**Get Agents Response:**
+```json
+[
+  {
+    "name": "agent-name",
+    "description": "Agent description",
+    "provider": "openai",
+    "model": "gpt-4"
+  }
+]
+```
+
+**Execute Agent Request:**
+```json
+{
+  "agent_name": "agent-name",
+  "message": "User message to the agent",
+  "provider": "openai",
+  "model": "gpt-4",
+  "user_id": "optional-user-id",
+  "parameters": {
+    "key": "value"
+  }
+}
+```
+
+**Execute Agent Response:**
+```json
+{
+  "job_id": "job-uuid",
+  "result": {
+    "content": "AI response content",
+    "model": "gpt-4",
+    "usage": {
+      "prompt_tokens": 100,
+      "completion_tokens": 50,
+      "total_tokens": 150
+    }
+  },
+  "error": null
+}
+```
+
+**AI API Request (OpenAI/Gemini/Claude):**
+```json
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Your prompt here"
+    }
+  ],
+  "model": "gpt-4",
+  "temperature": 0.7,
+  "max_tokens": 1000
+}
+```
+
+**AI API Response:**
+```json
+{
+  "content": "AI generated response",
+  "model": "gpt-4",
+  "usage": {
+    "prompt_tokens": 100,
+    "completion_tokens": 50,
+    "total_tokens": 150
+  }
+}
+```
+
+**Create GitHub Issue Request:**
+```json
+{
+  "repository": "owner/repo",
+  "text": "Issue description",
+  "user_id": "optional-user-id"
+}
+```
+
+**Create GitHub Issue Response:**
+```json
+{
+  "issue_number": 123,
+  "title": "AI-generated issue title",
+  "url": "https://github.com/owner/repo/issues/123",
+  "error": null
+}
+```
+
+**Configuration Note:** If KiGate API is not configured (missing KiGateApiUrl in appsettings), all KiGate endpoints will return:
+```json
+{
+  "error": "KiGate API is not configured. Please set KiGateApiUrl in appsettings."
+}
+```
+with HTTP status code 503 (Service Unavailable).
+
 ## Controllers
 
 ### HealthController
@@ -188,6 +315,21 @@ Note: All fields are optional in update requests. Only provided fields will be u
 - **Purpose**: Manage relations between ideas
 - **Logging**: Logs all relation operations
 - **Error Handling**: Returns appropriate status codes with error details
+
+### KiGateController
+- **Route**: `/api/kigate`
+- **Purpose**: Proxy requests to KiGate API (non-admin endpoints only)
+- **Authentication**: Uses Bearer token configured in appsettings
+- **Endpoints**:
+  - `GET /api/kigate/health` - Health check
+  - `GET /api/kigate/agents` - Get all available agents
+  - `POST /api/kigate/agent/execute` - Execute an agent
+  - `POST /api/kigate/openai` - Call OpenAI API
+  - `POST /api/kigate/gemini` - Call Google Gemini API
+  - `POST /api/kigate/claude` - Call Claude API
+  - `POST /api/kigate/github/create-issue` - Create GitHub issue
+- **Configuration Check**: Returns 503 if KiGate API is not configured
+- **Logging**: Logs all KiGate API requests and errors
 
 ## Security Considerations
 
