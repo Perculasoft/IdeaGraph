@@ -11,6 +11,11 @@ Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "IdeaGraph.FastAPI", "IdeaGr
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "IdeaGraph.Agents", "IdeaGraph.Agents\IdeaGraph.Agents.pyproj", "{2D48BF5B-39BA-40C8-9FA8-687DD6BD0E42}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Documentation", "Documentation", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
+	ProjectSection(SolutionItems) = preProject
+		Kigil–The_Cognitive_Development_Flow.md = Kigil–The_Cognitive_Development_Flow.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
