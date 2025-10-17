@@ -18,6 +18,7 @@ namespace IdeaGraph.Client.Models
         public List<string> Tags { get; set; } = new();
         public string CreatedAt { get; set; } = string.Empty;
         public string Status { get; set; } = "New";
+        public string? SectionId { get; set; }
     }
 
     public class IdeaCreateRequest
@@ -26,6 +27,7 @@ namespace IdeaGraph.Client.Models
         public string Description { get; set; } = string.Empty;
         public List<string> Tags { get; set; } = new();
         public string Status { get; set; } = "New";
+        public string? SectionId { get; set; }
     }
 
     public class IdeaUpdateRequest
@@ -34,6 +36,7 @@ namespace IdeaGraph.Client.Models
         public string? Description { get; set; }
         public List<string>? Tags { get; set; }
         public string? Status { get; set; }
+        public string? SectionId { get; set; }
     }
 
     public class Relation

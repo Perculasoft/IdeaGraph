@@ -13,6 +13,7 @@ namespace IdeaGraph.Client
             builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
             builder.Services.AddScoped<IdeaService>();
             builder.Services.AddScoped<RelationService>();
+            builder.Services.AddScoped<SectionService>();
             builder.Services.AddScoped<KiGateService>();
             builder.Services.AddScoped<SimilarService>();
 

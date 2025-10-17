@@ -5,6 +5,7 @@
 @using Microsoft.Extensions.Configuration
 @inject IdeaService IdeaService
 @inject SimilarService SimilarService
+@inject SectionService SectionService
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
 @rendermode InteractiveAuto
@@ -212,6 +213,16 @@
                         </div>
                     </div>
                     <div class="mb-3">
+                        <label for="section" class="form-label">Section</label>
+                        <InputSelect id="section" class="form-select" @bind-Value="editRequest.SectionId">
+                            <option value="">-- No Section --</option>
+                            @foreach (var sec in sections)
+                            {
+                                <option value="@sec.Id">@sec.Name</option>
+                            }
+                        </InputSelect>
+                    </div>
+                    <div class="mb-3">
                         <label for="status" class="form-label">Status</label>
                         <InputSelect id="status" class="form-select" @bind-Value="editRequest.Status">
                             <option value="New">New</option>
@@ -304,6 +315,7 @@
     public string Id { get; set; } = string.Empty;
 
     private Idea? idea;
+    private List<Section> sections = new();
     private bool isLoading = true;
     private bool isEditing = false;
     private bool isCreating = false;
@@ -336,6 +348,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadSections();
         await LoadIdea();
     }
 
@@ -352,7 +365,21 @@
         similarIdeas = new();
         activeTab = "similar";
         
+        await LoadSections();
         await LoadIdea();
+    }
+
+    private async Task LoadSections()
+    {
+        try
+        {
+            sections = await SectionService.GetSectionsAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load sections: {ex.Message}");
+            sections = new List<Section>();
+        }
     }
 
     private async Task LoadIdea()
@@ -368,7 +395,8 @@
                 Title = string.Empty,
                 Description = string.Empty,
                 Tags = new List<string>(),
-                Status = "New"
+                Status = "New",
+                SectionId = null
             };
             StateHasChanged();
             return;
@@ -460,7 +488,8 @@
             Title = idea.Title,
             Description = idea.Description,
             Tags = new List<string>(idea.Tags),
-            Status = idea.Status
+            Status = idea.Status,
+            SectionId = idea.SectionId
         };
         isEditing = true;
         errorMessage = string.Empty;
@@ -499,7 +528,8 @@
                     Title = editRequest.Title ?? string.Empty,
                     Description = editRequest.Description ?? string.Empty,
                     Tags = editRequest.Tags ?? new List<string>(),
-                    Status = editRequest.Status ?? "New"
+                    Status = editRequest.Status ?? "New",
+                    SectionId = string.IsNullOrWhiteSpace(editRequest.SectionId) ? null : editRequest.SectionId
                 };
                 
                 var created = await IdeaService.CreateIdeaAsync(createRequest);
