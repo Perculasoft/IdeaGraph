@@ -1,0 +1,364 @@
+@page "/sections"
+@using IdeaGraph.Client.Models
+@using IdeaGraph.Client.Services
+@inject SectionService SectionService
+@inject NavigationManager Navigation
+@rendermode InteractiveAuto
+
+<PageTitle>Sections - IdeaGraph</PageTitle>
+
+<div class="container-fluid mt-4">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h3>Sections</h3>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-primary" @onclick="LoadSections" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                    }
+                    else
+                    {
+                        <span>🔄 Refresh</span>
+                    }
+                </button>
+                <button class="btn btn-sm btn-primary" @onclick="StartCreate">
+                    ➕ New Section
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            @if (isLoading && sections.Count == 0)
+            {
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading sections...</p>
+                </div>
+            }
+            else if (sections.Count == 0 && !isEditing)
+            {
+                <p class="text-muted text-center py-4">No sections yet. Click "New Section" to create one!</p>
+            }
+            else
+            {
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        @successMessage
+                        <button type="button" class="btn-close" @onclick="() => successMessage = string.Empty"></button>
+                    </div>
+                }
+
+                @if (isEditing)
+                {
+                    <div class="card mb-3 border-primary">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">@(isCreating ? "Create New Section" : "Edit Section")</h5>
+                        </div>
+                        <div class="card-body">
+                            <EditForm Model="@editRequest" OnValidSubmit="@HandleSave">
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Section Name</label>
+                                    <InputText id="name" class="form-control" @bind-Value="editRequest.Name" placeholder="Enter section name" />
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary" disabled="@isSaving">
+                                        @if (isSaving)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                            <span>@(isCreating ? "Creating..." : "Updating...")</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@(isCreating ? "Create" : "Save Changes")</span>
+                                        }
+                                    </button>
+                                    <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                                </div>
+
+                                @if (!string.IsNullOrEmpty(errorMessage))
+                                {
+                                    <div class="alert alert-danger mt-3" role="alert">
+                                        @errorMessage
+                                    </div>
+                                }
+                            </EditForm>
+                        </div>
+                    </div>
+                }
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Created</th>
+                                <th>ID</th>
+                                <th style="width: 150px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var section in sections)
+                            {
+                                <tr>
+                                    <td>@(section.Name)</td>
+                                    <td>@GetRelativeTime(section.CreatedAt)</td>
+                                    <td><small class="text-muted">@(section.Id)</small></td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEdit(section)" title="Edit">
+                                                ✏️ Edit
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDelete(section)" title="Delete">
+                                                🗑️ Delete
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+@if (deletingSection != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Delete</h5>
+                    <button type="button" class="btn-close" @onclick="CancelDelete"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the section "<strong>@deletingSection.Name</strong>"?</p>
+                    <p class="text-muted">This action cannot be undone.</p>
+                    @if (!string.IsNullOrEmpty(deleteErrorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">
+                            @deleteErrorMessage
+                        </div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="HandleDelete" disabled="@isDeleting">
+                        @if (isDeleting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            <span>Deleting...</span>
+                        }
+                        else
+                        {
+                            <span>Delete</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Section> sections = new();
+    private bool isLoading = false;
+    private bool isEditing = false;
+    private bool isCreating = false;
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    // Edit state
+    private Section? editingSection = null;
+    private SectionUpdateRequest editRequest = new();
+
+    // Delete state
+    private Section? deletingSection = null;
+    private bool isDeleting = false;
+    private string deleteErrorMessage = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSections();
+    }
+
+    private async Task LoadSections()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            sections = await SectionService.GetSectionsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load sections: {ex.Message}";
+            sections = new List<Section>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartCreate()
+    {
+        isEditing = true;
+        isCreating = true;
+        editingSection = null;
+        editRequest = new SectionUpdateRequest { Name = string.Empty };
+        errorMessage = string.Empty;
+    }
+
+    private void StartEdit(Section section)
+    {
+        isEditing = true;
+        isCreating = false;
+        editingSection = section;
+        editRequest = new SectionUpdateRequest { Name = section.Name };
+        errorMessage = string.Empty;
+    }
+
+    private void CancelEdit()
+    {
+        isEditing = false;
+        isCreating = false;
+        editingSection = null;
+        editRequest = new();
+        errorMessage = string.Empty;
+    }
+
+    private async Task HandleSave()
+    {
+        if (string.IsNullOrWhiteSpace(editRequest.Name))
+        {
+            errorMessage = "Section name is required";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            if (isCreating)
+            {
+                var createRequest = new SectionCreateRequest { Name = editRequest.Name };
+                var created = await SectionService.CreateSectionAsync(createRequest);
+                if (created != null)
+                {
+                    successMessage = "Section created successfully!";
+                    await LoadSections();
+                    CancelEdit();
+                }
+                else
+                {
+                    errorMessage = "Failed to create section. Please try again.";
+                }
+            }
+            else if (editingSection != null)
+            {
+                var updated = await SectionService.UpdateSectionAsync(editingSection.Id, editRequest);
+                if (updated != null)
+                {
+                    successMessage = "Section updated successfully!";
+                    await LoadSections();
+                    CancelEdit();
+                }
+                else
+                {
+                    errorMessage = "Failed to update section. Please try again.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error {(isCreating ? "creating" : "updating")} section: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ConfirmDelete(Section section)
+    {
+        deletingSection = section;
+        deleteErrorMessage = string.Empty;
+    }
+
+    private void CancelDelete()
+    {
+        deletingSection = null;
+        deleteErrorMessage = string.Empty;
+    }
+
+    private async Task HandleDelete()
+    {
+        if (deletingSection == null)
+            return;
+
+        isDeleting = true;
+        deleteErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var success = await SectionService.DeleteSectionAsync(deletingSection.Id);
+            if (success)
+            {
+                successMessage = "Section deleted successfully!";
+                CancelDelete();
+                await LoadSections();
+            }
+            else
+            {
+                deleteErrorMessage = "Failed to delete section. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            deleteErrorMessage = $"Error deleting section: {ex.Message}";
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetRelativeTime(string createdAt)
+    {
+        if (string.IsNullOrEmpty(createdAt))
+            return "Unknown";
+
+        if (DateTime.TryParse(createdAt, out var date))
+        {
+            var timeSpan = DateTime.UtcNow - date;
+            if (timeSpan.TotalMinutes < 1)
+                return "Just now";
+            if (timeSpan.TotalMinutes < 60)
+                return $"{(int)timeSpan.TotalMinutes}m ago";
+            if (timeSpan.TotalHours < 24)
+                return $"{(int)timeSpan.TotalHours}h ago";
+            if (timeSpan.TotalDays < 30)
+                return $"{(int)timeSpan.TotalDays}d ago";
+            return date.ToString("MMM dd, yyyy");
+        }
+
+        return "Unknown";
+    }
+}
