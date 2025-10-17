@@ -47,17 +47,25 @@ api_key_header = APIKeyHeader(name="X-Api-Key", auto_error=False)
 
 app = FastAPI()
 
+class SectionIn(BaseModel):
+    name: str
+
+class SectionUpdateIn(BaseModel):
+    name: str | None = None
+
 class IdeaIn(BaseModel):
     title: str
     description: str = ""
     tags: list[str] = []
     status: str = "New"
+    section_id: str | None = None
 
 class IdeaUpdateIn(BaseModel):
     title: str | None = None
     description: str | None = None
     tags: list[str] | None = None
     status: str | None = None
+    section_id: str | None = None
 
 class RelationIn(BaseModel):
     source_id: str
@@ -146,7 +154,8 @@ try:
     
     ideas = client.get_or_create_collection(name="ideas")        # ids, documents, embeddings, metadatas
     relations = client.get_or_create_collection(name="relations")# store edges as docs w/ metadata
-    logger.info("Successfully initialized ChromaDB collections: 'ideas' and 'relations'")
+    sections = client.get_or_create_collection(name="sections")  # ids, documents, metadatas
+    logger.info("Successfully initialized ChromaDB collections: 'ideas', 'relations', and 'sections'")
 except Exception as e:
     logger.error(f"Failed to connect to ChromaDB Cloud: {e}", exc_info=True)
     logger.error("Please check your CHROMA_API_KEY, CHROMA_TENANT, and CHROMA_DATABASE settings in .env file.")
@@ -228,10 +237,136 @@ def health(api_key: str = Depends(verify_api_key)):
         logger.error(f"Health check failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Health check failed")
 
+# --- Section CRUD Endpoints ---
+
+@app.post("/section")
+def create_section(section: SectionIn, api_key: str = Depends(verify_api_key)):
+    logger.info(f"Creating new section: '{section.name}'")
+    
+    try:
+        _id = str(uuid.uuid4())
+        doc = section.name
+        meta = {
+            "name": section.name,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        # Sections don't need embeddings, just simple storage
+        sections.add(ids=[_id], documents=[doc], metadatas=[meta])
+        logger.info(f"Successfully created section with ID: {_id}")
+        return {"id": _id, "name": meta["name"], "created_at": meta["created_at"]}
+    except Exception as e:
+        logger.error(f"Failed to create section '{section.name}': {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to create section: {str(e)}")
+
+@app.get("/sections")
+def list_sections(api_key: str = Depends(verify_api_key)):
+    logger.debug("Listing all sections")
+    try:
+        res = sections.get(include=["metadatas"])
+        out = []
+        for i, _id in enumerate(res["ids"]):
+            meta = res["metadatas"][i] or {}
+            out.append({
+                "id": _id,
+                "name": meta.get("name", ""),
+                "created_at": meta.get("created_at", "")
+            })
+        # Sort by name
+        out.sort(key=lambda x: x.get("name", "").lower())
+        logger.info(f"Successfully listed {len(out)} sections")
+        return out
+    except Exception as e:
+        logger.error(f"Failed to list sections: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to list sections: {str(e)}")
+
+@app.get("/sections/{section_id}")
+def get_section(section_id: str, api_key: str = Depends(verify_api_key)):
+    logger.debug(f"Fetching section with ID: {section_id}")
+    try:
+        res = sections.get(ids=[section_id], include=["metadatas"])
+        if not res["ids"]:
+            logger.warning(f"Section not found: {section_id}")
+            raise HTTPException(404, "Section not found")
+        meta = res["metadatas"][0] or {}
+        logger.info(f"Successfully fetched section: {section_id}")
+        return {
+            "id": section_id,
+            "name": meta.get("name", ""),
+            "created_at": meta.get("created_at", "")
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get section {section_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get section: {str(e)}")
+
+@app.put("/sections/{section_id}")
+def update_section(section_id: str, section_update: SectionUpdateIn, api_key: str = Depends(verify_api_key)):
+    logger.info(f"Updating section with ID: {section_id}")
+    logger.debug(f"Update details - name: {section_update.name}")
+    
+    try:
+        # Check if section exists
+        res = sections.get(ids=[section_id], include=["metadatas"])
+        if not res["ids"]:
+            logger.warning(f"Section not found for update: {section_id}")
+            raise HTTPException(404, "Section not found")
+        
+        # Get current metadata
+        current_meta = res["metadatas"][0] or {}
+        
+        # Update only provided fields
+        updated_name = section_update.name if section_update.name is not None else current_meta.get("name", "")
+        
+        # Update metadata
+        new_meta = {
+            "name": updated_name,
+            "created_at": current_meta.get("created_at", datetime.utcnow().isoformat())
+        }
+        
+        # Update in ChromaDB
+        sections.update(ids=[section_id], documents=[updated_name], metadatas=[new_meta])
+        logger.info(f"Successfully updated section with ID: {section_id}")
+        
+        return {
+            "id": section_id,
+            "name": new_meta["name"],
+            "created_at": new_meta["created_at"]
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update section {section_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to update section: {str(e)}")
+
+@app.delete("/sections/{section_id}")
+def delete_section(section_id: str, api_key: str = Depends(verify_api_key)):
+    logger.info(f"Deleting section with ID: {section_id}")
+    
+    try:
+        # Check if section exists
+        res = sections.get(ids=[section_id])
+        if not res["ids"]:
+            logger.warning(f"Section not found for deletion: {section_id}")
+            raise HTTPException(404, "Section not found")
+        
+        # Delete the section
+        sections.delete(ids=[section_id])
+        
+        logger.info(f"Successfully deleted section with ID: {section_id}")
+        return {"message": "Section deleted successfully", "id": section_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete section {section_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to delete section: {str(e)}")
+
+# --- Idea CRUD Endpoints ---
+
 @app.post("/idea")
 async def create_idea(idea: IdeaIn, api_key: str = Depends(verify_api_key)):
     logger.info(f"Creating new idea: '{idea.title}'")
-    logger.debug(f"Idea details - title: '{idea.title}', description length: {len(idea.description)}, tags: {idea.tags}")
+    logger.debug(f"Idea details - title: '{idea.title}', description length: {len(idea.description)}, tags: {idea.tags}, section_id: {idea.section_id}")
     
     try:
         _id = str(uuid.uuid4())
@@ -243,9 +378,21 @@ async def create_idea(idea: IdeaIn, api_key: str = Depends(verify_api_key)):
             "created_at": datetime.utcnow().isoformat(),
             "status": idea.status
         }
+        if idea.section_id:
+            meta["section_id"] = idea.section_id
         ideas.add(ids=[_id], documents=[doc], embeddings=[vec], metadatas=[meta])
         logger.info(f"Successfully created idea with ID: {_id}")
-        return {"id": _id, "title": meta["title"], "description": idea.description, "tags": idea.tags, "created_at": meta["created_at"], "status": meta["status"], "relations": [], "impact_score": 0.0}
+        return {
+            "id": _id, 
+            "title": meta["title"], 
+            "description": idea.description, 
+            "tags": idea.tags, 
+            "created_at": meta["created_at"], 
+            "status": meta["status"],
+            "section_id": idea.section_id,
+            "relations": [], 
+            "impact_score": 0.0
+        }
     except Exception as e:
         logger.error(f"Failed to create idea '{idea.title}': {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to create idea: {str(e)}")
@@ -262,14 +409,17 @@ def list_ideas(api_key: str = Depends(verify_api_key)):
             tags_str = meta.get("tags", "")
             tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
             description = parse_description_from_document(doc)
-            out.append({
+            idea_dict = {
                 "id": _id,
                 "title": meta.get("title",""),
                 "description": description,
                 "tags": tags_list,
                 "created_at": meta.get("created_at", ""),
                 "status": meta.get("status", "New")
-            })
+            }
+            if "section_id" in meta:
+                idea_dict["section_id"] = meta["section_id"]
+            out.append(idea_dict)
         # optional: sort by created_at desc (string ISO OK)
         out.sort(key=lambda x: x.get("created_at",""), reverse=True)
         logger.info(f"Successfully listed {len(out)} ideas")
@@ -323,7 +473,8 @@ def get_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
         tags_str = meta.get("tags", "")
         tags_list = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
         logger.info(f"Successfully fetched idea: {idea_id} with {len(edges)} relations")
-        return {
+        
+        idea_dict = {
             "id": idea_id,
             "title": meta.get("title",""),
             "description": description,
@@ -332,6 +483,10 @@ def get_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
             "status": meta.get("status", "New"),
             "relations": edges
         }
+        if "section_id" in meta:
+            idea_dict["section_id"] = meta["section_id"]
+        
+        return idea_dict
     except HTTPException:
         raise
     except Exception as e:
@@ -341,7 +496,7 @@ def get_idea(idea_id: str, api_key: str = Depends(verify_api_key)):
 @app.put("/ideas/{idea_id}")
 async def update_idea(idea_id: str, idea_update: IdeaUpdateIn, api_key: str = Depends(verify_api_key)):
     logger.info(f"Updating idea with ID: {idea_id}")
-    logger.debug(f"Update details - title: {idea_update.title}, description length: {len(idea_update.description or '')}, tags: {idea_update.tags}")
+    logger.debug(f"Update details - title: {idea_update.title}, description length: {len(idea_update.description or '')}, tags: {idea_update.tags}, section_id: {idea_update.section_id}")
     
     try:
         # First check if idea exists and get current document
@@ -373,11 +528,17 @@ async def update_idea(idea_id: str, idea_update: IdeaUpdateIn, api_key: str = De
             "status": updated_status
         }
         
+        # Handle section_id: if explicitly provided (even if None), update it; otherwise keep existing
+        if idea_update.section_id is not None:
+            new_meta["section_id"] = idea_update.section_id
+        elif "section_id" in current_meta:
+            new_meta["section_id"] = current_meta["section_id"]
+        
         # Update in ChromaDB
         ideas.update(ids=[idea_id], documents=[doc], embeddings=[vec], metadatas=[new_meta])
         logger.info(f"Successfully updated idea with ID: {idea_id}")
         
-        return {
+        result = {
             "id": idea_id,
             "title": new_meta["title"],
             "description": updated_description,
@@ -385,6 +546,10 @@ async def update_idea(idea_id: str, idea_update: IdeaUpdateIn, api_key: str = De
             "created_at": new_meta["created_at"],
             "status": new_meta["status"]
         }
+        if "section_id" in new_meta:
+            result["section_id"] = new_meta["section_id"]
+        
+        return result
     except HTTPException:
         raise
     except Exception as e:
@@ -526,11 +691,15 @@ Please respond ONLY with a JSON object in this exact format (no markdown, no cod
                 "status": updated_status
             }
             
+            # Preserve section_id if it exists
+            if "section_id" in current_meta:
+                new_meta["section_id"] = current_meta["section_id"]
+            
             # Update in ChromaDB
             ideas.update(ids=[idea_id], documents=[doc], embeddings=[vec], metadatas=[new_meta])
             logger.info(f"Successfully updated idea {idea_id} with enhanced content")
             
-            return {
+            result = {
                 "id": idea_id,
                 "title": updated_title,
                 "description": improved_description,
@@ -538,6 +707,10 @@ Please respond ONLY with a JSON object in this exact format (no markdown, no cod
                 "created_at": new_meta["created_at"],
                 "status": updated_status
             }
+            if "section_id" in new_meta:
+                result["section_id"] = new_meta["section_id"]
+            
+            return result
             
         except httpx.HTTPStatusError as e:
             logger.error(f"HTTP error from OpenAI API: {e.response.status_code} - {e.response.text}", exc_info=True)

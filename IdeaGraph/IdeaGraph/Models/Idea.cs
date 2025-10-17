@@ -31,6 +31,9 @@ namespace IdeaGraph.Models
         
         [JsonPropertyName("status")]
         public string Status { get; set; } = "New";
+        
+        [JsonPropertyName("section_id")]
+        public string? SectionId { get; set; }
     }
 
     public class IdeaCreateRequest
@@ -46,6 +49,9 @@ namespace IdeaGraph.Models
         
         [JsonPropertyName("status")]
         public string Status { get; set; } = "New";
+        
+        [JsonPropertyName("section_id")]
+        public string? SectionId { get; set; }
     }
 
     public class IdeaUpdateRequest
@@ -61,6 +67,9 @@ namespace IdeaGraph.Models
         
         [JsonPropertyName("status")]
         public string? Status { get; set; }
+        
+        [JsonPropertyName("section_id")]
+        public string? SectionId { get; set; }
     }
 
     public class IdeaDetail : Idea
