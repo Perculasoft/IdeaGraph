@@ -122,6 +122,16 @@ namespace IdeaGraph
                 return new IdeaGraph.Client.Services.SectionService(httpClient);
             });
             
+            // Configure HttpClient for client's TaskService to call server API
+            builder.Services.AddScoped<IdeaGraph.Client.Services.TaskService>(sp =>
+            {
+                var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+                var httpClient = httpClientFactory.CreateClient();
+                var navManager = sp.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+                httpClient.BaseAddress = new Uri(navManager.BaseUri);
+                return new IdeaGraph.Client.Services.TaskService(httpClient);
+            });
+            
             builder.Services.AddHttpClient();
 
             var app = builder.Build();
