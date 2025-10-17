@@ -32,7 +32,16 @@ namespace IdeaGraph.Client.Services
         {
             try
             {
-                var tasks = await _httpClient.GetFromJsonAsync<List<IdeaTask>>($"api/tasks/idea/{ideaId}");
+                var response = await _httpClient.GetAsync($"api/tasks/idea/{ideaId}");
+
+                if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    return new List<IdeaTask>();
+                }
+
+                response.EnsureSuccessStatusCode();
+
+                var tasks = await response.Content.ReadFromJsonAsync<List<IdeaTask>>();
                 return tasks ?? new List<IdeaTask>();
             }
             catch (Exception ex)
