@@ -6,6 +6,8 @@
 @inject IdeaService IdeaService
 @inject SimilarService SimilarService
 @inject SectionService SectionService
+@inject TaskService TaskService
+@inject KiGateService KiGateService
 @inject NavigationManager Navigation
 @inject IConfiguration Configuration
 @rendermode InteractiveAuto
@@ -70,7 +72,7 @@
                 <ul class="nav nav-tabs" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link @(activeTab == "similar" ? "active" : "")" 
-                                @onclick='() => SetActiveTab("similar")' 
+                                @onclick='async () => await SetActiveTab("similar")' 
                                 type="button" 
                                 role="tab">
                             Similar
@@ -78,7 +80,7 @@
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link @(activeTab == "task" ? "active" : "")" 
-                                @onclick='() => SetActiveTab("task")' 
+                                @onclick='async () => await SetActiveTab("task")' 
                                 type="button" 
                                 role="tab">
                             Task
@@ -126,7 +128,153 @@
                     else if (activeTab == "task")
                     {
                         <div class="tab-pane fade show active" role="tabpanel">
-                            <p class="text-muted">Task functionality coming soon...</p>
+                            <!-- Task Management -->
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="mb-0">Tasks</h5>
+                                @if (!isCreating && !isEditingTask && !isCreatingTask)
+                                {
+                                    <button class="btn btn-sm btn-primary" @onclick="StartCreateTask">
+                                        ➕ New Task
+                                    </button>
+                                }
+                            </div>
+
+                            @if (isCreatingTask || isEditingTask)
+                            {
+                                <!-- Task Edit Form -->
+                                <div class="card mb-3">
+                                    <div class="card-body">
+                                        <h6>@(isCreatingTask ? "Create New Task" : "Edit Task")</h6>
+                                        <EditForm Model="@taskEditRequest" OnValidSubmit="@HandleTaskSave">
+                                            <div class="mb-2">
+                                                <label class="form-label">Title</label>
+                                                <InputText class="form-control" @bind-Value="taskEditRequest.Title" placeholder="Task title" />
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label">Description (Markdown)</label>
+                                                <InputTextArea class="form-control" rows="4" @bind-Value="taskEditRequest.Description" placeholder="Task description" />
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label">Repository</label>
+                                                <InputText class="form-control" @bind-Value="taskEditRequest.Repository" placeholder="owner/repository" />
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label">Tags</label>
+                                                <div class="tags-input-container">
+                                                    <div class="tags-chips">
+                                                        @if (taskEditRequest.Tags != null)
+                                                        {
+                                                            @foreach (var tag in taskEditRequest.Tags)
+                                                            {
+                                                                <span class="tag-chip">
+                                                                    @tag
+                                                                    <button type="button" class="tag-remove" @onclick="() => RemoveTaskTag(tag)">×</button>
+                                                                </span>
+                                                            }
+                                                        }
+                                                    </div>
+                                                    <input type="text" 
+                                                           class="form-control mt-2" 
+                                                           @bind="currentTaskTag" 
+                                                           @onkeydown="HandleTaskTagInput"
+                                                           placeholder="Type tag and press Enter or comma" />
+                                                </div>
+                                            </div>
+                                            <div class="mb-2">
+                                                <label class="form-label">Status</label>
+                                                <InputSelect class="form-select" @bind-Value="taskEditRequest.Status">
+                                                    <option value="New">New</option>
+                                                    <option value="InWork">In Work</option>
+                                                    <option value="Review">Review</option>
+                                                    <option value="Ready">Ready</option>
+                                                    <option value="Closed">Closed</option>
+                                                </InputSelect>
+                                            </div>
+                                            <div class="d-flex gap-2">
+                                                <button type="submit" class="btn btn-sm btn-primary" disabled="@isSavingTask">
+                                                    @if (isSavingTask)
+                                                    {
+                                                        <span class="spinner-border spinner-border-sm me-1"></span>
+                                                    }
+                                                    Save Task
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-secondary" @onclick="CancelTaskEdit">Cancel</button>
+                                            </div>
+                                        </EditForm>
+                                    </div>
+                                </div>
+                            }
+
+                            @if (isLoadingTasks)
+                            {
+                                <div class="text-center py-3">
+                                    <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                        <span class="visually-hidden">Loading tasks...</span>
+                                    </div>
+                                    <p class="mt-2 mb-0">Loading tasks...</p>
+                                </div>
+                            }
+                            else if (tasks.Any())
+                            {
+                                <div class="list-group">
+                                    @foreach (var task in tasks)
+                                    {
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between align-items-start">
+                                                <div class="flex-grow-1">
+                                                    <h6 class="mb-1">@task.Title</h6>
+                                                    @if (!string.IsNullOrEmpty(task.Description))
+                                                    {
+                                                        <p class="mb-1 text-muted small">@GetPlainTextPreview(task.Description, 150)</p>
+                                                    }
+                                                    @if (task.Tags.Any())
+                                                    {
+                                                        <div class="mt-1">
+                                                            @foreach (var tag in task.Tags)
+                                                            {
+                                                                <span class="badge bg-secondary me-1">@tag</span>
+                                                            }
+                                                        </div>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(task.Repository))
+                                                    {
+                                                        <small class="text-muted">📦 @task.Repository</small>
+                                                    }
+                                                    @if (!string.IsNullOrEmpty(task.KiSuggestions))
+                                                    {
+                                                        <div class="mt-1">
+                                                            <small class="text-warning">⚠️ AI Suggestions: @task.KiSuggestions</small>
+                                                        </div>
+                                                    }
+                                                </div>
+                                                <div class="ms-3">
+                                                    <span class="badge @GetTaskStatusBadgeClass(task.Status)">@task.Status</span>
+                                                </div>
+                                            </div>
+                                            <div class="mt-2 d-flex gap-1">
+                                                @if (task.Status != "Ready" && task.Status != "Closed")
+                                                {
+                                                    <button class="btn btn-sm btn-info" @onclick="() => ImproveTask(task.Id)" title="Improve with AI">
+                                                        🤖 AI Improve
+                                                    </button>
+                                                }
+                                                @if (task.Status == "Ready" && !string.IsNullOrEmpty(task.Repository))
+                                                {
+                                                    <button class="btn btn-sm btn-success" @onclick="() => CreateGitHubIssueFromTask(task.Id)" title="Create GitHub Issue">
+                                                        📝 Create GitHub Issue
+                                                    </button>
+                                                }
+                                                <button class="btn btn-sm btn-outline-primary" @onclick="() => StartEditTask(task)">Edit</button>
+                                                <button class="btn btn-sm btn-outline-danger" @onclick="() => ConfirmDeleteTask(task.Id)">Delete</button>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                            }
+                            else
+                            {
+                                <p class="text-muted">No tasks yet. Create your first task to get started.</p>
+                            }
                         </div>
                     }
                 </div>
@@ -421,6 +569,12 @@
             if (idea != null && !isEditing)
             {
                 await LoadSimilarIdeas();
+                
+                // Load tasks if we're on the task tab
+                if (activeTab == "task")
+                {
+                    await LoadTasks();
+                }
             }
         }
         catch (Exception ex)
@@ -463,9 +617,15 @@
         }
     }
 
-    private void SetActiveTab(string tabName)
+    private async Task SetActiveTab(string tabName)
     {
         activeTab = tabName;
+        
+        // Load tasks when task tab is activated
+        if (tabName == "task" && !isLoadingTasks && tasks.Count == 0)
+        {
+            await LoadTasks();
+        }
     }
 
     private string GetPlainTextPreview(string html, int maxLength)
@@ -680,5 +840,278 @@
             isEnhancing = false;
             StateHasChanged();
         }
+    }
+
+    // Task management state
+    private List<IdeaTask> tasks = new();
+    private bool isLoadingTasks = false;
+    private bool isCreatingTask = false;
+    private bool isEditingTask = false;
+    private bool isSavingTask = false;
+    private string editingTaskId = string.Empty;
+    private TaskUpdateRequest taskEditRequest = new();
+    private string currentTaskTag = string.Empty;
+    private string taskErrorMessage = string.Empty;
+
+    private async Task LoadTasks()
+    {
+        if (string.IsNullOrEmpty(Id) || Id.Equals("new", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        isLoadingTasks = true;
+        StateHasChanged();
+
+        try
+        {
+            tasks = await TaskService.GetTasksByIdeaAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load tasks: {ex.Message}");
+            tasks = new List<IdeaTask>();
+        }
+        finally
+        {
+            isLoadingTasks = false;
+            StateHasChanged();
+        }
+    }
+
+    private void StartCreateTask()
+    {
+        isCreatingTask = true;
+        isEditingTask = false;
+        editingTaskId = string.Empty;
+        taskEditRequest = new TaskUpdateRequest
+        {
+            Title = string.Empty,
+            Description = string.Empty,
+            Repository = string.Empty,
+            Tags = new List<string>(),
+            Status = "New"
+        };
+        currentTaskTag = string.Empty;
+        taskErrorMessage = string.Empty;
+    }
+
+    private void StartEditTask(IdeaTask task)
+    {
+        isEditingTask = true;
+        isCreatingTask = false;
+        editingTaskId = task.Id;
+        taskEditRequest = new TaskUpdateRequest
+        {
+            Title = task.Title,
+            Description = task.Description,
+            Repository = task.Repository,
+            Tags = new List<string>(task.Tags),
+            Status = task.Status
+        };
+        currentTaskTag = string.Empty;
+        taskErrorMessage = string.Empty;
+    }
+
+    private void CancelTaskEdit()
+    {
+        isCreatingTask = false;
+        isEditingTask = false;
+        editingTaskId = string.Empty;
+        taskEditRequest = new();
+        currentTaskTag = string.Empty;
+        taskErrorMessage = string.Empty;
+    }
+
+    private async Task HandleTaskSave()
+    {
+        if (string.IsNullOrWhiteSpace(taskEditRequest.Title))
+        {
+            taskErrorMessage = "Title is required";
+            return;
+        }
+
+        isSavingTask = true;
+        taskErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            if (isCreatingTask)
+            {
+                var createRequest = new TaskCreateRequest
+                {
+                    Title = taskEditRequest.Title ?? string.Empty,
+                    Description = taskEditRequest.Description ?? string.Empty,
+                    Repository = taskEditRequest.Repository ?? string.Empty,
+                    Tags = taskEditRequest.Tags ?? new List<string>(),
+                    Status = taskEditRequest.Status ?? "New",
+                    IdeaId = Id
+                };
+
+                var created = await TaskService.CreateTaskAsync(createRequest);
+                if (created != null)
+                {
+                    tasks.Add(created);
+                    tasks = tasks.OrderByDescending(t => t.CreatedAt).ToList();
+                    CancelTaskEdit();
+                }
+                else
+                {
+                    taskErrorMessage = "Failed to create task. Please try again.";
+                }
+            }
+            else if (isEditingTask)
+            {
+                var updated = await TaskService.UpdateTaskAsync(editingTaskId, taskEditRequest);
+                if (updated != null)
+                {
+                    var index = tasks.FindIndex(t => t.Id == editingTaskId);
+                    if (index >= 0)
+                    {
+                        tasks[index] = updated;
+                    }
+                    CancelTaskEdit();
+                }
+                else
+                {
+                    taskErrorMessage = "Failed to update task. Please try again.";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            taskErrorMessage = $"Error saving task: {ex.Message}";
+        }
+        finally
+        {
+            isSavingTask = false;
+            StateHasChanged();
+        }
+    }
+
+    private void HandleTaskTagInput(KeyboardEventArgs e)
+    {
+        if ((e.Key == "Enter" || e.Key == ",") && !string.IsNullOrWhiteSpace(currentTaskTag))
+        {
+            AddTaskTag();
+        }
+    }
+
+    private void AddTaskTag()
+    {
+        var trimmedTag = currentTaskTag.Trim().TrimEnd(',');
+        if (!string.IsNullOrWhiteSpace(trimmedTag))
+        {
+            if (taskEditRequest.Tags == null)
+            {
+                taskEditRequest.Tags = new List<string>();
+            }
+            
+            if (!taskEditRequest.Tags.Contains(trimmedTag))
+            {
+                taskEditRequest.Tags.Add(trimmedTag);
+                currentTaskTag = string.Empty;
+            }
+        }
+    }
+
+    private void RemoveTaskTag(string tag)
+    {
+        if (taskEditRequest.Tags != null)
+        {
+            taskEditRequest.Tags.Remove(tag);
+        }
+    }
+
+    private async Task ImproveTask(string taskId)
+    {
+        taskErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var improved = await TaskService.ImproveTaskAsync(taskId);
+            if (improved != null)
+            {
+                var index = tasks.FindIndex(t => t.Id == taskId);
+                if (index >= 0)
+                {
+                    tasks[index] = improved;
+                }
+                successMessage = "Task improved successfully with AI!";
+                await Task.Delay(2000);
+                successMessage = string.Empty;
+            }
+            else
+            {
+                taskErrorMessage = "Failed to improve task. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            taskErrorMessage = $"Error improving task: {ex.Message}";
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task CreateGitHubIssueFromTask(string taskId)
+    {
+        taskErrorMessage = string.Empty;
+        StateHasChanged();
+
+        try
+        {
+            var response = await TaskService.CreateGitHubIssueAsync(taskId);
+            if (response != null && response.Error == null)
+            {
+                successMessage = $"GitHub issue #{response.IssueNumber} created successfully!";
+                await Task.Delay(3000);
+                successMessage = string.Empty;
+            }
+            else
+            {
+                taskErrorMessage = $"Failed to create GitHub issue: {response?.Error ?? "Unknown error"}";
+            }
+        }
+        catch (Exception ex)
+        {
+            taskErrorMessage = $"Error creating GitHub issue: {ex.Message}";
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task ConfirmDeleteTask(string taskId)
+    {
+        // In a real app, you'd show a confirmation dialog
+        var success = await TaskService.DeleteTaskAsync(taskId);
+        if (success)
+        {
+            tasks.RemoveAll(t => t.Id == taskId);
+            StateHasChanged();
+        }
+        else
+        {
+            taskErrorMessage = "Failed to delete task. Please try again.";
+        }
+    }
+
+    private string GetTaskStatusBadgeClass(string status)
+    {
+        return status switch
+        {
+            "New" => "bg-info",
+            "InWork" => "bg-primary",
+            "Review" => "bg-warning text-dark",
+            "Ready" => "bg-success",
+            "Closed" => "bg-secondary",
+            _ => "bg-secondary"
+        };
     }
 }
